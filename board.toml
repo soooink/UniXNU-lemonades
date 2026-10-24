@@ -78,6 +78,9 @@ BUILDID_STRING = "lemonades-menu-research"
 header_version = 2
 pagesize = 4096
 base = 0
+# Matched to the verified ios-topaz probe header on this handset.
+os_version = "13.0.0"
+os_patch_level = "2025-01"
 kernel_offset = 0x8000
 ramdisk_offset = 0x1000000
 second_offset = 0
