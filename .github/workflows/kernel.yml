@@ -48,10 +48,12 @@ jobs:
           git -C UniXNU submodule update --init --recursive
           git clone https://github.com/UniXNU/UniXNU-sheng UniXNU-sheng
           git -C UniXNU-sheng checkout "$PIN_SHENG"
-          # The uefi checkout is not needed for the kernel stage; the setup
-          # tool requires it, so provide a shallow stand-in at any commit.
-          git clone --depth 1 https://github.com/${{ github.repository_owner }}/uefi-lemonades uefi-lemonades || \
+          # The setup tool pins every source; the uefi checkout is only a
+          # workspace dependency for the kernel stage.
+          PIN_UEFI=$(python3 -c "import json;print(json.load(open('device/source-lock.json'))['uefi-lemonades'])")
+          git clone https://github.com/${{ github.repository_owner }}/uefi-lemonades uefi-lemonades || \
             git clone --depth 1 https://github.com/reAAAq/uefi-umi uefi-lemonades
+          git -C uefi-lemonades checkout "$PIN_UEFI" || true
 
       - name: Install host tools
         run: |
