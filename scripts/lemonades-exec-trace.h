@@ -3,28 +3,28 @@
  */
 #include <stdint.h>
 #include "umi_early_trace_config.h"
-void lemonades_exec_trace_record(unsigned, uint64_t, uint64_t, uint64_t,
+void umi_exec_trace_record(unsigned, uint64_t, uint64_t, uint64_t,
     uint64_t, uint64_t, uint64_t);
-#ifdef LEMONADES_EXEC_TRACE_IMPLEMENTATION
+#ifdef UMI_EXEC_TRACE_IMPLEMENTATION
 #include <kern/backtrace.h>
-volatile uint64_t lemonades_exec_trace_observation[20];
-volatile uint64_t lemonades_exec_trace_seen;
-__attribute__((noinline)) void lemonades_exec_trace_checkpoint(void)
+volatile uint64_t umi_exec_trace_observation[20];
+volatile uint64_t umi_exec_trace_seen;
+__attribute__((noinline)) void umi_exec_trace_checkpoint(void)
 {
 	__asm__ volatile("" ::: "memory");
 }
-void lemonades_exec_trace_record(unsigned phase, uint64_t a, uint64_t b, uint64_t c,
+void umi_exec_trace_record(unsigned phase, uint64_t a, uint64_t b, uint64_t c,
     uint64_t d, uint64_t e, uint64_t f)
 {
 	if (phase >= 64) return;
 	uint64_t daif;
 	__asm__ volatile("mrs %0,daif\n\tmsr daifset,#3" : "=r"(daif) :: "memory");
 	uint64_t bit = 1ull << phase;
-	if (lemonades_exec_trace_seen & bit) {
+	if (umi_exec_trace_seen & bit) {
 		__asm__ volatile("msr daif,%0" :: "r"(daif) : "memory");
 		return;
 	}
-	lemonades_exec_trace_seen |= bit;
+	umi_exec_trace_seen |= bit;
 	uint64_t values[20] = {1, phase, a, b, c, d, e, f};
 	if (phase == 5 || phase == 7) {
 		uintptr_t frames[11];
@@ -32,10 +32,10 @@ void lemonades_exec_trace_record(unsigned phase, uint64_t a, uint64_t b, uint64_
 		values[8] = count;
 		for (unsigned i = 0; i < count; ++i) values[9+i] = frames[i];
 	}
-	for (unsigned i = 0; i < 20; ++i) lemonades_exec_trace_observation[i] = values[i];
-#if LEMONADES_EARLY_TRACE
-	extern unsigned long lemonades_trace_console_address;
-	volatile uint32_t *header = (volatile uint32_t *)lemonades_trace_console_address;
+	for (unsigned i = 0; i < 20; ++i) umi_exec_trace_observation[i] = values[i];
+#if UMI_EARLY_TRACE
+	extern unsigned long umi_trace_console_address;
+	volatile uint32_t *header = (volatile uint32_t *)umi_trace_console_address;
 	const uint32_t capacity = 0x200000 - 12;
 	if (header && header[0] == 0x43474244 && header[1] <= capacity && header[2] <= capacity) {
 		uint32_t at = header[1] == capacity ? 0 : header[1], size = header[2];
@@ -73,6 +73,6 @@ void lemonades_exec_trace_record(unsigned phase, uint64_t a, uint64_t b, uint64_
 	}
 #endif
 	__asm__ volatile("msr daif,%0" :: "r"(daif) : "memory");
-	lemonades_exec_trace_checkpoint();
+	umi_exec_trace_checkpoint();
 }
 #endif

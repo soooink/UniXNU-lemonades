@@ -3,8 +3,8 @@
  * This records state only; it does not change the authentication result.
  */
 #include <stdint.h>
-volatile uint64_t lemonades_owner_root_observation[18];
-static void lemonades_owner_root_record(unsigned phase)
+volatile uint64_t umi_owner_root_observation[18];
+static void umi_owner_root_record(unsigned phase)
 {
 	extern volatile unsigned native_verified_block_root_device;
 	extern volatile unsigned native_verified_block_root_media_matches;
@@ -16,7 +16,7 @@ static void lemonades_owner_root_record(unsigned phase)
 	extern volatile unsigned native_ufs_integrity_failures;
 	extern volatile unsigned native_aes_kat_status;
 	extern volatile unsigned native_aes_registered;
-	volatile uint64_t *v = lemonades_owner_root_observation;
+	volatile uint64_t *v = umi_owner_root_observation;
 	v[0] = phase;
 	v[1] = native_owner_root_trust_enabled;
 	v[2] = native_owner_root_apple_autherr;
@@ -35,11 +35,11 @@ static void lemonades_owner_root_record(unsigned phase)
 	v[15] = native_ufs_integrity_failures;
 	v[16] = native_aes_kat_status;
 	v[17] = native_aes_registered;
-#if LEMONADES_EARLY_TRACE
-	extern unsigned long lemonades_trace_console_address;
+#if UMI_EARLY_TRACE
+	extern unsigned long umi_trace_console_address;
 	uint64_t daif;
 	__asm__ volatile("mrs %0,daif\n\tmsr daifset,#3" : "=r"(daif) :: "memory");
-	volatile uint32_t *header = (volatile uint32_t *)lemonades_trace_console_address;
+	volatile uint32_t *header = (volatile uint32_t *)umi_trace_console_address;
 	const uint32_t capacity = 0x200000 - 12;
 	if (header && header[0] == 0x43474244 && header[1] <= capacity && header[2] <= capacity) {
 		uint32_t at = header[1] == capacity ? 0 : header[1], size = header[2];

@@ -4,18 +4,18 @@
  */
 #include <kern/backtrace.h>
 #include "../arm64/umi_early_trace_config.h"
-volatile uint64_t lemonades_lock_failure_observation[64];
-__attribute__((noinline)) void lemonades_lock_failure_checkpoint(void)
+volatile uint64_t umi_lock_failure_observation[64];
+__attribute__((noinline)) void umi_lock_failure_checkpoint(void)
 {
 	__asm__ volatile("" ::: "memory");
 }
-static void lemonades_lock_failure_record(lck_rw_t *lock, unsigned line)
+static void umi_lock_failure_record(lck_rw_t *lock, unsigned line)
 {
 	uint64_t daif;
 	__asm__ volatile("mrs %0,daif" : "=r"(daif));
 	uintptr_t frames[48];
 	unsigned count = backtrace(frames, 48, NULL, NULL);
-	volatile uint64_t *v = lemonades_lock_failure_observation;
+	volatile uint64_t *v = umi_lock_failure_observation;
 	for (unsigned i = 0; i < 64; ++i) v[i] = 0;
 	v[0] = 1;
 	v[1] = (uintptr_t)lock;
@@ -29,10 +29,10 @@ static void lemonades_lock_failure_record(lck_rw_t *lock, unsigned line)
 	v[9] = count;
 	for (unsigned i = 0; i < count; ++i) v[10+i] = frames[i];
 	v[58] = line;
-#if LEMONADES_EARLY_TRACE
-	extern unsigned long lemonades_trace_console_address;
+#if UMI_EARLY_TRACE
+	extern unsigned long umi_trace_console_address;
 	__asm__ volatile("msr daifset,#3" ::: "memory");
-	volatile uint32_t *header = (volatile uint32_t *)lemonades_trace_console_address;
+	volatile uint32_t *header = (volatile uint32_t *)umi_trace_console_address;
 	const uint32_t capacity = 0x200000 - 12;
 	if (header && header[0] == 0x43474244 && header[1] <= capacity && header[2] <= capacity) {
 		uint32_t at = header[1] == capacity ? 0 : header[1], size = header[2];
@@ -70,15 +70,15 @@ static void lemonades_lock_failure_record(lck_rw_t *lock, unsigned line)
 	}
 	__asm__ volatile("msr daif,%0" :: "r"(daif) : "memory");
 #endif
-	lemonades_lock_failure_checkpoint();
+	umi_lock_failure_checkpoint();
 }
 
 /* Explicit QEMU-only failure-path input; absent from ordinary boot arguments. */
-void lemonades_lock_failure_selftest(void)
+void umi_lock_failure_selftest(void)
 {
 	static lck_rw_t own_lock;
 	own_lock = (lck_rw_t){ .lck_rw_type = LCK_TYPE_RW, .lck_rw_can_sleep = false,
 	                       .lck_rw_priv_excl = true };
 	lck_rw_lock_shared(&own_lock);
-	panic("lemonades lock failure selftest unexpectedly returned");
+	panic("umi lock failure selftest unexpectedly returned");
 }
