@@ -14,4 +14,8 @@ mformat -C -F -T 131072 -v LEM9RXNU -N 53484e47 -i "$OUT" ::
 mmd -i "$OUT" ::/EFI ::/EFI/UniXNU ::/EFI/UniXNU/Payloads
 mcopy -i "$OUT" "$TOML" ::/EFI/UniXNU/unixnu.toml
 mcopy -i "$OUT" "$APP" ::/EFI/UniXNU/Payloads/LemonadesPayloadCheck.efi
+# proof.bin: the 16384-byte fixture LemonadesPayloadCheck verifies
+# (byte[i] = (i*73 + 19) & 0xFF, EOF and seek(509) covered by the check).
+python3 -c "open('/tmp/proof.bin','wb').write(bytes((i*73+19)&0xFF for i in range(16384)))"
+mcopy -i "$OUT" /tmp/proof.bin ::/EFI/UniXNU/Payloads/proof.bin
 echo "$OUT"
