@@ -39,10 +39,13 @@ config-file knobs (`kernel_compression`, `dtb` field):
 cd ../uefi-lemonades && python3 build_uefi.py -d lemonades
 ```
 
-If the OnePlus ABL rejects the gzip'd kernel, `Resources/Configs/lemonades.toml`
-already defaults to `kernel_compression = "none"`; the `unixnu bootimg` path
-always gzips, so prefer the `build_uefi.py` path while compression support is
-unverified.
+`build_uefi.py -d lemonades` defaults to `kernel_compression = "none"`
+(the stock boot_b kernel is uncompressed); it emits `Mu-lemonades-0.img` at the
+checkout root. The `unixnu bootimg` path emits the gzip variant at
+`out/lemonades/boot/boot.img` and validates the header by unpacking it. Try the
+uncompressed image first; the gzip variant is the fallback if the ABL turns out
+to require compression, and `os_version` (stock: 0x220001aa) can be added to
+the config if the ABL checks it.
 
 ## Flash and observe
 

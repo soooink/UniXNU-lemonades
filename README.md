@@ -74,6 +74,9 @@ the iOS payload replaces the `userdata` partition contents.
 - [x] Board, defconfig, ADT generator, package scaffold (derived from umi)
 - [x] `uefi-lemonades` platform scaffold (derived from umiPkg attempt-15 baseline)
 - [x] kona v2.1 DTB extracted from the stock `boot_b`
-- [ ] `unixnu build firmware` on Linux (toolchain setup in `docs/BUILD.md`)
+- [x] Firmware builds on Linux: `build_uefi.py -d lemonades` produces the
+      3 MiB `SILICIUM_UEFI.fd` (DEBUG_CLANGPDB, LLVM 19) and the packed
+      `Mu-lemonades-0.img` boot image (header v2, uncompressed shim+FV kernel,
+      DTB in the v2 section); `unixnu bootimg` produces the gzip variant
 - [ ] Stage 1-2 on hardware: UEFI menu with inherited framebuffer
 - [ ] Stage 3-7: kernel, storage, userland, touch
