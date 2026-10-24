@@ -62,6 +62,25 @@ Expected first milestone: the UniXNU menu drawn over the inherited splash
 confirms, "Restart" reboots back into Android. Logs: ramoops console at
 0xB0000000, readable from OrangeFox adb at /sys/fs/pstore/console-ramoops*.
 
+## If the phone is stuck at the boot splash
+
+The splash persisting means nothing has written the framebuffer: the chain
+stopped before UEFI SEC. Read the ramoops console from OrangeFox (root adb):
+
+```sh
+adb shell cat /sys/fs/pstore/console-ramoops-0   # or console-ramoops0
+```
+
+| Evidence in pstore | Meaning | Next step |
+| --- | --- | --- |
+| Last Android/recovery log only, no `LEM0`, no `UMI:` | The ABL never jumped to the BootShim | Flash the stock-identical full-DTB image (default now); try the gzip variant; compare `fastboot getvar` slot is `_b` |
+| `LEM0`/`LEM1` markers, no `UMI: SEC start` | BootShim ran; the jump into UEFI SEC failed | Report back: shim/FD copy fault; check the FD region is untouched (0x9fc00000) |
+| `UMI: SEC start` ... stops later | UEFI stopped at the named checkpoint | Send the log; extend MemoryMapLib/driver at that stage |
+
+`LEM0`/`LEM1` are written by BootShim.S before/after copying the firmware
+volume into 0x9fc00000; `UMI:` lines are the Silicium SEC/PEI checkpoints.
+Always keep a restore path: `fastboot flash boot_b ~/ROm/hw/9r/backups/boot_b.img`.
+
 ## Kernel (macOS or CI)
 
 The kernel, prelink, payload and userdata steps call Xcode, hdiutil and
