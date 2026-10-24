@@ -1,0 +1,17 @@
+--- a/bsd/kern/kern_exit.c
++++ b/bsd/kern/kern_exit.c
+@@ -1336,6 +1336,14 @@
+ 
+ static int initproc_spawned = 0;
+ 
++/* Read the real local state; keep the sysctl and exit policy unchanged. */
++int umi_initproc_main_state(void);
++int
++umi_initproc_main_state(void)
++{
++	return initproc_spawned;
++}
++
+ static int
+ sysctl_initproc_spawned(struct sysctl_oid *oidp, __unused void *arg1, __unused int arg2, struct sysctl_req *req)
+ {

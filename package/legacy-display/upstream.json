@@ -1,0 +1,7 @@
+{
+  "repository": "UniXNU-sheng",
+  "commit": "a599a1a8a92093b5077543e071b72130769eb325",
+  "source": "package/LegacyDisplayProbe.cpp",
+  "source_sha256": "7f2d66b9fd32ceca0bdc24cec793f027b56eff617f0167b5be31be1b3282f972",
+  "adaptation": "Only gate the separate sheng keystore/input/SM8550 hardware providers; full display lifecycle is retained."
+}

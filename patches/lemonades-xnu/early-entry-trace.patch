@@ -1,0 +1,174 @@
+diff --git a/osfmk/arm64/start.s b/osfmk/arm64/start.s
+--- a/osfmk/arm64/start.s
++++ b/osfmk/arm64/start.s
+@@ -37,6 +37,13 @@
+ #include <arm64/tunables/tunables.s>
+ #endif
+ #include <arm64/exception_asm.h>
++#include "umi_early_trace_config.h"
++#if UMI_EARLY_TRACE
++#if ARM_PGSHIFT != 12
++#error umi entry trace requires 4 KiB pages
++#endif
++#include "umi-early-trace.inc"
++#endif
+ 
+ #if __ARM_KERNEL_PROTECT__
+ #include <arm/pmap.h>
+@@ -463,6 +470,9 @@
+ 	.align 2
+ 	.globl EXT(start_first_cpu)
+ LEXT(start_first_cpu)
++#if UMI_EARLY_TRACE
++	UMI_TRACE 0x01, x0
++#endif
+ 
+ 	// Unlock the core for debugging
+ 	msr		OSLAR_EL1, xzr
+@@ -483,6 +493,9 @@
+ 	ldr		x24, [x20, BA_MEM_SIZE]				// Get the physical memory size
+ 	adrp	x25, EXT(bootstrap_pagetables)@page	// Get the start of the page tables
+ 	ldr		x26, [x20, BA_BOOT_FLAGS]			// Get the kernel boot flags
++#if UMI_EARLY_TRACE
++	UMI_TRACE 0x02, x25
++#endif
+ 
+ 	// Clear the registers that will be used to store the userspace thread pointer and CPU number.
+ 	// We may not actually be booting from ordinal CPU 0, so this register will be updated
+@@ -617,8 +630,26 @@
+ 	lsr		x5,  x24, #(ARM_TT_L2_SHIFT)
+ 	create_bootstrap_mapping x14, x15, x5, x3, x2, x9, x10, x11, x12, x13
+ 
++#if UMI_EARLY_TRACE
++	// One uncached, non-executable 2 MiB console mapping in TTBR0 only.
++	// The 0xb0200000 pmsg half is not mapped. Never replace an existing L1 slot.
++	ldr x9, [x25, #16]
++	cbnz x9, Lbootstrap_tables_exhausted
++	mov x0, #0xb0000000
++	mov x4, x0
++	mov x5, #1
++	mov x1, x25
++	create_bootstrap_mapping x0, x4, x5, x1, x2, x6, x10, x11, x12, x13
++	add x9, x2, #0xc00
++	MOV64 x10, (0xb0000000 | ARM_TTE_TYPE_BLOCK | ARM_TTE_VALID | ARM_TTE_BLOCK_AF | ARM_TTE_BLOCK_SH(SH_OUTER_MEMORY) | ARM_TTE_BLOCK_ATTRINDX(CACHE_ATTRINDX_DISABLE) | ARM_TTE_BLOCK_PNX | ARM_TTE_BLOCK_NX)
++	str x10, [x9]
++	UMI_TRACE 0x03, x2
++#endif
+ 	b Lbootstrap_tables_ready
+ Lbootstrap_tables_exhausted:
++#if UMI_EARLY_TRACE
++	UMI_TRACE 0xee, x2
++#endif
+ 	// MMU is still off. Stop with the offending cursor/end preserved for
+ 	// the early debugger rather than corrupting memory or forging a map.
+ 	b Lbootstrap_tables_exhausted
+@@ -763,8 +794,14 @@
+ 
+ 	// Enable caches, MMU, ROP and JOP
+ 	MOV64   x0, SCTLR_EL1_DEFAULT
++#if UMI_EARLY_TRACE
++	UMI_TRACE 0x04, x0
++#endif
+ 	MSR_SCTLR_EL1_X0
+ 	isb		sy
++#if UMI_EARLY_TRACE
++	UMI_TRACE 0x05, x0
++#endif
+ 
+ #if !VMAPPLE
+ 	MOV64   x1, SCTLR_EL1_DEFAULT
+@@ -831,6 +868,9 @@
+ #endif
+ 
+ 	// Return to arm_init()
++#if UMI_EARLY_TRACE
++	UMI_TRACE 0x06, lr
++#endif
+ 	ret
+ 
+ Ltrampoline:
+diff --git a/osfmk/arm/arm_init.c b/osfmk/arm/arm_init.c
+--- a/osfmk/arm/arm_init.c
++++ b/osfmk/arm/arm_init.c
+@@ -59,6 +59,10 @@
+ #include <pexpert/arm/consistent_debug.h>
+ #include <pexpert/device_tree.h>
+ #include <arm64/proc_reg.h>
++#include "../arm64/umi_early_trace_config.h"
++#if UMI_EARLY_TRACE
++extern void umi_early_trace(unsigned long phase, unsigned long value, unsigned long console);
++#endif
+ #include <arm/pmap.h>
+ #include <arm/caches_internal.h>
+ #include <arm/cpu_internal.h>
+@@ -354,6 +358,10 @@
+ 	DTEntry chosen = NULL;
+ 	unsigned int dt_entry_size = 0;
+ 
++#if UMI_EARLY_TRACE
++	vm_offset_t umi_console = 0xb0000000;
++	umi_early_trace(0x10, (unsigned long)args, umi_console);
++#endif
+ 	arm_setup_pre_sign();
+ 
+ 	arm_slide_rebase_and_sign_image();
+@@ -369,7 +377,13 @@
+ 	BootCpuData.jop_key = ml_default_jop_pid();
+ #endif /* defined(HAS_APPLE_PAC) */
+ 
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x11, (unsigned long)args, umi_console);
++#endif
+ 	PE_init_platform(FALSE, args); /* Get platform expert set up */
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x12, (unsigned long)args, umi_console);
++#endif
+ 	boot_progress_init();
+ 
+ #if __arm64__
+@@ -532,7 +546,15 @@
+ #endif  /* __ARM_PAN_AVAILABLE__ */
+ 
+ 	boot_progress_stage("arm_vm_init enter");
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x20, xmaxmem, umi_console);
++#endif
+ 	arm_vm_init(xmaxmem, args);
++#if UMI_EARLY_TRACE
++	// arm_vm_init removes TTBR0. Use the established kernel I/O mapping now.
++	umi_console = ml_io_map(0xb0000000, 0x200000);
++	umi_early_trace(0x21, umi_console, umi_console);
++#endif
+ 	boot_progress_stage("arm_vm_init returned");
+ 
+ 	if (debug_boot_arg) {
+@@ -602,6 +624,9 @@
+ 	cpu_machine_idle_init(TRUE);
+ 
+ 	PE_init_platform(TRUE, &BootCpuData);
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x30, 0, umi_console);
++#endif
+ 
+ #if __arm64__
+ 	extern bool cpu_config_correct;
+@@ -618,6 +643,9 @@
+ #endif
+ 
+ 	cpu_timebase_init(TRUE);
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x31, 0, umi_console);
++#endif
+ 
+ #if KPERF
+ 	/* kptimer_curcpu_up() must be called after cpu_timebase_init */
+@@ -667,6 +695,9 @@
+ 	 * against string vulnerabilities
+ 	 */
+ 	__stack_chk_guard &= ~(0xFFULL << 8);
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x40, (unsigned long)args, umi_console);
++#endif
+ 	machine_startup(args);
+ }
+ 

@@ -1,0 +1,26 @@
+version = 1
+
+[boot]
+timeout = -1
+fallback_timeout = 3600
+default = "payload-check"
+rotate = 0
+connect_all = true
+
+[ui]
+title = "OnePlus 9R - RAM payload"
+
+[kits]
+autoload = false
+
+[[entry]]
+id = "payload-check"
+title = "Verify RAM payload"
+type = "efi"
+path = "Payloads/LemonadesPayloadCheck.efi"
+
+[[entry]]
+id = "reset"
+title = "Restart"
+type = "action"
+action = "reset"

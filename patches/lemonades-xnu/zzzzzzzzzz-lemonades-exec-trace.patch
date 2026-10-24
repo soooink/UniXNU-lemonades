@@ -1,0 +1,120 @@
+--- a/bsd/kern/kern_exec.c
++++ b/bsd/kern/kern_exec.c
+@@ -7337,6 +7337,10 @@
+ }
+ #endif
+ 
++#define UMI_EXEC_TRACE_IMPLEMENTATION
++#include "../../osfmk/arm64/umi-exec-trace.h"
++static unsigned umi_exec_attempts;
++
+ static int
+ load_init_program_at_path(proc_t p, user_addr_t scratch_addr, const char* path, user_addr_t envp)
+ {
+@@ -7351,6 +7355,9 @@
+ 	assert(p);
+ 	assert(scratch_addr);
+ 	assert(path);
++	unsigned umi_attempt = umi_exec_attempts < 4 ? umi_exec_attempts++ : 4;
++	umi_exec_trace_record(0x10 + umi_attempt, (uintptr_t)path, scratch_addr,
++	    (uintptr_t)p, (uint32_t)proc_pid(p), 0, 0);
+ 
+ 	/*
+ 	 * Copy out program name.
+@@ -7420,7 +7427,9 @@
+ 	 */
+ 	set_security_token(p, proc_ucred_unsafe(p));
+ 
+-	return execve(p, &init_exec_args, retval);
++	error = execve(p, &init_exec_args, retval);
++	umi_exec_trace_record(0x20 + umi_attempt, (uint32_t)error, 0, 0, 0, 0, 0);
++	return error;
+ }
+ 
+ static const char * init_programs[] = {
+@@ -7465,6 +7474,7 @@
+ void
+ load_init_program(proc_t p)
+ {
++	umi_exec_trace_record(1, (uintptr_t)p, (uint32_t)proc_pid(p), 0, 0, 0, 0);
+ 	boot_progress_stage("load_init_program enter");
+ 	uint32_t i;
+ 	int error;
+--- a/bsd/kern/bsd_init.c
++++ b/bsd/kern/bsd_init.c
+@@ -1245,6 +1245,7 @@
+ volatile int native_owner_root_readonly = -1;
+ volatile dev_t native_owner_root_mount_device = NODEV;
+ volatile dev_t native_owner_root_selected_device = NODEV;
++#include "../../osfmk/arm64/umi_early_trace_config.h"
+ #include "../../osfmk/arm64/umi-root-trace.h"
+ void native_owner_root_accepted_checkpoint(int, int);
+ __attribute__((noinline)) void
+--- a/osfmk/arm64/sleh.c
++++ b/osfmk/arm64/sleh.c
+@@ -27,6 +27,8 @@
+  * @APPLE_OSREFERENCE_LICENSE_HEADER_END@
+  */
+ 
++#include "umi-exec-trace.h"
++extern int proc_selfpid(void);
+ #include <arm/caches_internal.h>
+ #include <arm/cpu_data.h>
+ #include <arm/cpu_data_internal.h>
+@@ -641,6 +643,9 @@
+ 	}
+ #endif
+ 	bool is_user = PSR64_IS_USER(get_saved_state_cpsr(state));
++	if (is_user && class != ESR_EC_SVC_64 && class != ESR_EC_SVC_32)
++		umi_exec_trace_record(4, get_saved_state_pc(state), get_saved_state_cpsr(state),
++		    esr, far, (uint32_t)proc_selfpid(), get_saved_state_lr(state));
+ 
+ #if CONFIG_SPTM
+ 	// Lockdown should only be initiated for kernel exceptions
+@@ -1890,6 +1895,9 @@
+ handle_svc(arm_saved_state_t *state)
+ {
+ 	int      trap_no = get_saved_state_svc_number(state);
++	umi_exec_trace_record(3, get_saved_state_pc(state), get_saved_state_cpsr(state),
++	    get_saved_state_sp(state), (uint32_t)trap_no,
++	    (uint32_t)proc_selfpid(), get_saved_state_lr(state));
+ 	thread_t thread  = current_thread();
+ 	struct   proc *p;
+ 
+--- a/osfmk/kern/debug.c
++++ b/osfmk/kern/debug.c
+@@ -55,6 +55,7 @@
+  */
+ 
+ #include "../arm64/umi_early_trace_config.h"
++#include "../arm64/umi-exec-trace.h"
+ #if UMI_EARLY_TRACE
+ extern void umi_early_trace(unsigned long phase, unsigned long value, unsigned long console);
+ extern unsigned long umi_trace_console_address;
+@@ -1144,6 +1145,8 @@
+     uint64_t panic_options_mask, void *panic_data_ptr, unsigned long panic_caller)
+ {
+ #pragma clang diagnostic pop
++	umi_exec_trace_record(5, (uintptr_t)panic_format_str, panic_caller, reason,
++	    panic_options_mask, 0, 0);
+ 
+ #if UMI_EARLY_TRACE
+ 	umi_early_trace(0xa0, (unsigned long)panic_format_str, umi_trace_console_address);
+--- a/osfmk/kern/startup.c
++++ b/osfmk/kern/startup.c
+@@ -69,6 +69,7 @@
+ 
+ #include <debug.h>
+ #include "../arm64/umi_early_trace_config.h"
++#include "../arm64/umi-exec-trace.h"
+ #if UMI_EARLY_TRACE
+ extern void umi_early_trace(unsigned long phase, unsigned long value, unsigned long console);
+ extern unsigned long umi_trace_console_address;
+@@ -801,6 +802,7 @@
+ 
+ 	/* Load the static and engineering trust caches */
+ 	load_static_trust_cache();
++	umi_exec_trace_record(6, 0, 0, 0, 0, 0, 0);
+ #endif
+ 
+ 	kernel_startup_initialize_upto(STARTUP_SUB_LOCKDOWN);

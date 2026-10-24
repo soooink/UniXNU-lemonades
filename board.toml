@@ -1,0 +1,108 @@
+# OnePlus 9R (lemonades) / SM8250 device repository.
+# Derived from the Xiaomi Mi 10 (umi) UniXNU bring-up, reAAAq attempt 80.
+# This default file selects the minimal baseline; profiles are assembled by
+# the bring-up tools. Nothing here has run on hardware yet.
+[board]
+name = "lemonades"
+soc = "SM8250"
+description = "OnePlus 9R / SM8250-AC UniXNU bring-up"
+kit = "lemonades"
+
+[kernel]
+defconfig = "lemonades_defconfig"
+
+# Minimal security bring-up closure, not a storage or userland configuration.
+# Same donor and prelink inputs as the umi port: XNU is built from source and
+# only platform-independent Apple components are prelinked from the kernelcache.
+[kernel.prelink]
+tool = "kits/NativePrelink/emit_prelink.py"
+kernel = "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf"
+kernelcache_sha256 = "f18b4df865405f2a287b84977d7aca745e056d656d9fc9df1662970ce2969de7"
+slide = "-0x1000000"
+early_security_init = "com.apple.driver.AppleMobileFileIntegrity=0xfffffff005ab4ae0"
+roots = ["com.apple.driver.AppleMobileFileIntegrity", "com.apple.security.sandbox"]
+
+# Same iPad7,1 donor as umi (kernelcache hash pinned identically; XNU runs from source).
+[ipsw]
+url = "https://updates.cdn-apple.com/2025SpringFCS/fullrestores/122-77166/DCA6CFE8-90E9-4B92-880D-3DE171798E40/iPad_Pro_HFR_17.7.11_21H461_Restore.ipsw"
+product = "iPad7,1"
+version = "17.7.11"
+build = "21H461"
+device_class = "j120ap"
+chip_id = 0x8011
+board_id = 12
+fetch = ["KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1,SystemTrustCache"]
+
+[ipsw.sha256]
+"kernelcache.release.ipad7" = "13b97fa2c5ce97f04408dcc28c41fb6b0d60b9440065197879acf44b2572bf7b"
+"DeviceTree.j120ap.im4p" = "3f612f64819fbf6a8aacc03fabeda08ba897c4bf5385df995c59815c0c80c8f0"
+"044-76040-038.dmg.trustcache" = "4563bdbf6ed8f72237d45dbba3ccde432634338f95c10d79d5d4631678a97c7c"
+"044-76034-038.dmg.trustcache" = "9742f3d566369e6c48f63b3dc0740b06c243d13c6650e25bbf44616e13d6d097"
+"044-76040-038.dmg" = "3f99b859c9728379110b66657c7b15285bcb1925ad8b5726542e2cdcf8b1028d"
+"044-76034-038.dmg" = "b4908cde41d23e6bc05e6af51a2c9eeb00cf0f863a6a18b1600c96a3fd70414f"
+
+# GPT geometry: NOT YET MEASURED on the target handset. Read the userdata
+# entry from the running phone (OrangeFox recovery has root adb):
+#   sgdisk -p /dev/block/sda   # userdata is sda24 in the stage-0 dump
+# then fill first_lba / last_lba here. lba_bytes is the UFS logical block size.
+[userdata]
+first_lba = 0x0
+last_lba = 0x0
+lba_bytes = 4096
+windows = [
+  { name = "OS", component = "OS" },
+  { name = "SystemOS", component = "Cryptex1,SystemOS" },
+]
+
+[firmware]
+config = "lemonades"
+dsc = "Platforms/OnePlus/lemonadesPkg/lemonades.dsc"
+fd = "Build/lemonadesPkg/{target}_CLANGPDB/FV/SILICIUM_UEFI.fd"
+patches = ["Resources/MuPatches/Gic-Spurious.patch", "Resources/MuPatches/Mac-Bash3.patch", "Resources/MuPatches/Dxe-Trace.patch", "Resources/MuPatches/Display-Services-Trace.patch"]
+packages = [
+  "{uefi}", "{uefi}/Platforms/OnePlus", "{tree}/package", "{edk2}",
+  "{uefi}/Common/Mu", "{uefi}/Common/Mu_OEM_Sample",
+  "{uefi}/Silicon/Qualcomm", "{uefi}/Silicon/Silicium",
+]
+
+[firmware.defines]
+ENABLE_SECUREBOOT = "0"
+DEVICE_MODEL = "0"
+MEMORY_PROTECTION = "TRUE"
+SHIP_MODE = "FALSE"
+BUILDID_STRING = "lemonades-menu-research"
+
+# OnePlus 8T-family ABL: boot header v2, no vendor_boot, no fastboot boot.
+# Offsets copied from this phone's stock boot_b header.
+[bootimg.image]
+header_version = 2
+pagesize = 4096
+base = 0
+kernel_offset = 0x8000
+ramdisk_offset = 0x1000000
+second_offset = 0
+tags_offset = 0x100
+
+[payload]
+volume = "LEM9RXNU"
+size_mib = 64
+loader = "firmware"
+title = "OnePlus 9R - XNU bring-up"
+# Sum of the three observed FDT DRAM banks (0x80000000+0x39900000,
+# 0xc0000000+0x140000000, 0x200000000+0x180000000) - identical to the umi map.
+dram_size = "0x2f9900000"
+panic_screen = false
+timeout = -1
+kernel_args = ["-v", "keepsyms=1", "kt_fixed_zones=120"]
+
+[payload.adt]
+tool = "scripts/make-lemonades-adt.py"
+# Local IOPlatformUUID seed based on the observed qcom,msm-id (SoC 0x164 = SM8250).
+chip_id = "0x164"
+unique_chip_id = "required"
+# Actual SM8250 MPIDR affinities; probe on the 9R confirmed PSCI CPU_ON 0x100..0x700.
+cpu_regs = "0,0x100,0x200,0x300,0x400,0x500,0x600,0x700"
+psci_method = "smc"
+owned_memory_size = "0x10000000"
+packed_data_ramdisk = false
+ipad_identity = false

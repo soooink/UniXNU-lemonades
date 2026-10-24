@@ -1,0 +1,106 @@
+diff --git a/osfmk/arm/arm_init.c b/osfmk/arm/arm_init.c
+--- a/osfmk/arm/arm_init.c
++++ b/osfmk/arm/arm_init.c
+@@ -62,6 +62,7 @@
+ #include "../arm64/umi_early_trace_config.h"
+ #if UMI_EARLY_TRACE
+ extern void umi_early_trace(unsigned long phase, unsigned long value, unsigned long console);
++unsigned long umi_trace_console_address;
+ #endif
+ #include <arm/pmap.h>
+ #include <arm/caches_internal.h>
+@@ -553,6 +554,7 @@
+ #if UMI_EARLY_TRACE
+ 	// arm_vm_init removes TTBR0. Use the established kernel I/O mapping now.
+ 	umi_console = ml_io_map(0xb0000000, 0x200000);
++	umi_trace_console_address = umi_console;
+ 	umi_early_trace(0x21, umi_console, umi_console);
+ #endif
+ 	boot_progress_stage("arm_vm_init returned");
+@@ -565,12 +567,27 @@
+ 	sleep_token_buffer_init();
+ #endif
+ 
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x22, 0, umi_console);
++#endif
+ 	PE_consistent_debug_inherit();
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x23, 0, umi_console);
++#endif
+ 
+ 	/* Setup debugging output. */
+ 	const unsigned int serial_exists = serial_init();
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x24, serial_exists, umi_console);
++#endif
+ 	kernel_startup_initialize_upto(STARTUP_SUB_KPRINTF);
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x25, 0, umi_console);
++#endif
+ 	kprintf("kprintf initialized\n");
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x26, 0, umi_console);
++#endif
+ 
+ 	serialmode = 0;
+ 	if (PE_parse_boot_argn("serial", &serialmode, sizeof(serialmode))) {
+@@ -611,9 +628,15 @@
+ 		disableConsoleOutput = FALSE;     /* Allow printfs to happen */
+ 	}
+ 	PE_create_console();
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x27, 0, umi_console);
++#endif
+ 
+ 	/* setup console output */
+ 	PE_init_printf(FALSE);
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x28, 0, umi_console);
++#endif
+ 
+ #if __arm64__
+ #if DEBUG
+@@ -622,6 +645,9 @@
+ #endif
+ 
+ 	cpu_machine_idle_init(TRUE);
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x29, 0, umi_console);
++#endif
+ 
+ 	PE_init_platform(TRUE, &BootCpuData);
+ #if UMI_EARLY_TRACE
+diff --git a/osfmk/kern/startup.c b/osfmk/kern/startup.c
+--- a/osfmk/kern/startup.c
++++ b/osfmk/kern/startup.c
+@@ -68,6 +68,11 @@
+  */
+ 
+ #include <debug.h>
++#include "../arm64/umi_early_trace_config.h"
++#if UMI_EARLY_TRACE
++extern void umi_early_trace(unsigned long phase, unsigned long value, unsigned long console);
++extern unsigned long umi_trace_console_address;
++#endif
+ #include <mach_kdp.h>
+ 
+ #include <mach/boolean.h>
+@@ -410,7 +415,17 @@
+ 		}
+ 		startup_phase = cur->subsystem - 1;
+ 		kernel_startup_log(cur->subsystem);
++#if UMI_EARLY_TRACE
++		if (upto <= STARTUP_SUB_KPRINTF && umi_trace_console_address) {
++			umi_early_trace(0x50, (unsigned long)cur->func, umi_trace_console_address);
++		}
++#endif
+ 		cur->func(cur->arg);
++#if UMI_EARLY_TRACE
++		if (upto <= STARTUP_SUB_KPRINTF && umi_trace_console_address) {
++			umi_early_trace(0x51, (unsigned long)cur->func, umi_trace_console_address);
++		}
++#endif
+ 		startup_entry_cur = ++cur;
+ 	}
+ 	kernel_startup_log(upto);

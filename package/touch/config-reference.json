@@ -1,0 +1,33 @@
+{
+  "scope": "Diagnostic only: two asynchronous A8 configuration fingerprint sweeps over offsets0..0xcff. One64byte read per worker pass after FIFO service; no config data writes.",
+  "reference_commit": "71b13e62f057a649b77fe4062feb73ee72ad609c",
+  "firmware": {
+    "chip0": "3639",
+    "fw": "0128",
+    "svn": "4053",
+    "config": "004b"
+  },
+  "references": {
+    "out/lemonades/attempt-75-runtime/result.json": "31af5982635467d97ba334f123878fe3f6d6240c06c20275105164b1e397ea4e",
+    "out/lemonades/attempt-75-runtime/recovery-startup-replay.json": "fc0bf3c620f257e73f3e577bb48dd0594a720310aab05cf76e9747c4efcbfcd9",
+    "out/lemonades/attempt-75-runtime/recovery-config-reference.json": "93e4149378e9a4afed10529a324ec94266c9d5bcda2eca0acfb1fd03d5101397",
+    "out/lemonades/attempt-75-runtime/recovery-config-0.bin": "71ee992040a46c51ced3cda872e158d1c45e5e2413c0e5b7953087b017149dfd",
+    "out/lemonades/attempt-75-runtime/rea-scan-followup.json": "9a94f58f5a9e6d4e4584d35348491262e3dda5c4a2338fb273cedcc6c2011aa8",
+    "out/lemonades/research/fts-static-20261020/kernel/drivers/input/touchscreen/fts_521/fts_lib/ftsCore.c": "ac9d88fce719b46e4c869b8ed9c67eafd54579274a0688e96de71b3d04a7167c"
+  },
+  "native_configuration_sha256": "71ee992040a46c51ced3cda872e158d1c45e5e2413c0e5b7953087b017149dfd",
+  "native_capture_pair_equal": true,
+  "offset_start": 0,
+  "bytes": 3328,
+  "chunk": 64,
+  "samples": [
+    5,
+    30
+  ],
+  "limitations": [
+    "CRC32 block matches are fingerprints, not proof of bytewise identity",
+    "Asynchronous configuration reads may include runtime changes",
+    "Native capture matches FTB first3328 bytes at offset113876 except byte0x72 (05 vs08); meaning unresolved",
+    "No claim of a touch fix; source reset/sensing sequence unchanged from75"
+  ]
+}

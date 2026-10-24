@@ -1,0 +1,26 @@
+--- a/bsd/kern/kern_exec.c
++++ b/bsd/kern/kern_exec.c
+@@ -7046,6 +7046,23 @@
+ __attribute__((noinline)) void
+ native_owner_cache_checkpoint(int status, int authorized)
+ {
++	extern void umi_exec_trace_record(unsigned, uint64_t, uint64_t, uint64_t,
++	    uint64_t, uint64_t, uint64_t);
++	uint64_t manifest_status = UINT64_MAX, cache_flags = 0;
++#if defined(XNU_OWNER_BOOT_MANIFEST) && XNU_OWNER_BOOT_MANIFEST
++	extern volatile int native_owner_boot_manifest_status;
++	manifest_status = (uint32_t)native_owner_boot_manifest_status;
++#endif
++#if defined(XNU_OWNER_CACHE_STARTUP) && XNU_OWNER_CACHE_STARTUP
++	cache_flags = native_owner_cache_dyld_flags;
++#endif
++	umi_exec_trace_record(10, (uint32_t)status, (uint32_t)authorized,
++	    native_owner_cache_stage, native_owner_cache_actual_mount_flags,
++	    (uint32_t)native_owner_cache_selected_device,
++	    (uint32_t)native_owner_cache_mounted_device);
++	umi_exec_trace_record(11, (uint32_t)native_owner_cache_readonly,
++	    (uint32_t)native_owner_cache_native_union, (uint32_t)native_owner_cache_root_recheck,
++	    cache_flags, manifest_status, native_owner_cache_original_root);
+ 	__asm__ volatile("" : : "r"(status), "r"(authorized) : "memory");
+ }
+ 

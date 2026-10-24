@@ -1,0 +1,26 @@
+/local.toml
+/out/
+/build/
+/.cache/
+__pycache__/
+*.pyc
+.DS_Store
+# Private device dumps, generated images and Apple restore components.
+*.ipsw
+*.img
+*.dmg
+*.fd
+*.efi
+*.dtb
+*.dtbo
+*.obj
+*.o
+*.a
+*.macho
+*.dbr
+*.ftb
+*.bin
+*.im4p
+*.trustcache
+*.pem
+*.key

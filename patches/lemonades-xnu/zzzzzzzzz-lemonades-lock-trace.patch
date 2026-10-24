@@ -1,0 +1,66 @@
+--- a/osfmk/kern/lock_rw.c
++++ b/osfmk/kern/lock_rw.c
+@@ -65,6 +65,7 @@
+ #include <kern/debug.h>
+ #include <machine/atomic.h>
+ #include <machine/machine_cpu.h>
++#include "../arm64/umi-lock-trace.h"
+ 
+ KALLOC_TYPE_DEFINE(KT_LCK_RW, lck_rw_t, KT_PRIV_ACCT);
+ 
+@@ -1124,6 +1125,7 @@
+ 	if (lock->lck_rw_can_sleep) {
+ 		lck_rw_lock_count_inc(thread, lock);
+ 	} else if (get_preemption_level() == 0) {
++		umi_lock_failure_record(lock, __LINE__);
+ 		panic("Taking non-sleepable RW lock with preemption enabled");
+ 	}
+ 
+@@ -1158,6 +1160,7 @@
+ 	if (lock->lck_rw_can_sleep) {
+ 		lck_rw_lock_count_inc(thread, lock);
+ 	} else if (get_preemption_level() == 0) {
++		umi_lock_failure_record(lock, __LINE__);
+ 		panic("Taking non-sleepable RW lock with preemption enabled");
+ 	}
+ 
+@@ -1397,6 +1400,7 @@
+ 	if (lock->lck_rw_can_sleep) {
+ 		lck_rw_lock_count_inc(thread, lock);
+ 	} else if (get_preemption_level() == 0) {
++		umi_lock_failure_record(lock, __LINE__);
+ 		panic("Taking non-sleepable RW lock with preemption enabled");
+ 	}
+ 
+@@ -1944,6 +1948,7 @@
+ 	if (lock->lck_rw_can_sleep) {
+ 		lck_rw_lock_count_inc(thread, lock);
+ 	} else if (get_preemption_level() == 0) {
++		umi_lock_failure_record(lock, __LINE__);
+ 		panic("Taking non-sleepable RW lock with preemption enabled");
+ 	}
+ 
+@@ -2018,6 +2023,7 @@
+ 	if (lock->lck_rw_can_sleep) {
+ 		lck_rw_lock_count_inc(thread, lock);
+ 	} else if (get_preemption_level() == 0) {
++		umi_lock_failure_record(lock, __LINE__);
+ 		panic("Taking non-sleepable RW lock with preemption enabled");
+ 	}
+ 
+--- a/bsd/kern/bsd_init.c
++++ b/bsd/kern/bsd_init.c
+@@ -1251,6 +1251,13 @@
+ native_owner_root_accepted_checkpoint(int apple, int owner)
+ {
+ 	umi_owner_root_record(2);
++#if !UMI_EARLY_TRACE
++	unsigned umi_lock_test = 0;
++	if (PE_parse_boot_argn("umi-lock-test", &umi_lock_test, sizeof(umi_lock_test)) && umi_lock_test == 1) {
++		extern void umi_lock_failure_selftest(void);
++		umi_lock_failure_selftest();
++	}
++#endif
+ 	__asm__ volatile("" : : "r"(apple), "r"(owner) : "memory");
+ }
+ void native_owner_root_checkpoint(int, int, dev_t);

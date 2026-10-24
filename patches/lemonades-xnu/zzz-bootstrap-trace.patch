@@ -1,0 +1,135 @@
+diff --git a/osfmk/arm64/machine_routines.c b/osfmk/arm64/machine_routines.c
+--- a/osfmk/arm64/machine_routines.c
++++ b/osfmk/arm64/machine_routines.c
+@@ -59,6 +59,11 @@
+ #include <kern/coalition.h>
+ #include <pexpert/device_tree.h>
+ 
++#include "umi_early_trace_config.h"
++#if UMI_EARLY_TRACE
++extern void umi_early_trace(unsigned long phase, unsigned long value, unsigned long console);
++extern unsigned long umi_trace_console_address;
++#endif
+ #include <IOKit/IOPlatformExpert.h>
+ #if HIBERNATION
+ #include <IOKit/IOHibernatePrivate.h>
+@@ -499,6 +504,9 @@
+ void
+ machine_startup(__unused boot_args * args)
+ {
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x41, (unsigned long)args, umi_trace_console_address);
++#endif
+ #if defined(HAS_IPI) && (DEVELOPMENT || DEBUG)
+ 	if (!PE_parse_boot_argn("fastipi", &gFastIPI, sizeof(gFastIPI))) {
+ 		gFastIPI = 1;
+@@ -507,6 +515,10 @@
+ 
+ 
+ 	machine_conf();
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x42, 0, umi_trace_console_address);
++#endif
++
+ 
+ 
+ 	/*
+diff --git a/osfmk/kern/startup.c b/osfmk/kern/startup.c
+--- a/osfmk/kern/startup.c
++++ b/osfmk/kern/startup.c
+@@ -227,6 +227,9 @@
+ static inline void
+ kernel_bootstrap_log(const char *message)
+ {
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x52, (unsigned long)message, umi_trace_console_address);
++#endif
+ 	boot_progress_stage(message);
+ 	if ((startup_debug & STARTUP_DEBUG_VERBOSE) &&
+ 	    startup_phase >= STARTUP_SUB_KPRINTF) {
+@@ -238,6 +241,9 @@
+ static inline void
+ kernel_bootstrap_thread_log(const char *message)
+ {
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x53, (unsigned long)message, umi_trace_console_address);
++#endif
+ 	boot_progress_stage(message);
+ 	if ((startup_debug & STARTUP_DEBUG_VERBOSE) &&
+ 	    startup_phase >= STARTUP_SUB_KPRINTF) {
+@@ -416,13 +422,13 @@
+ 		startup_phase = cur->subsystem - 1;
+ 		kernel_startup_log(cur->subsystem);
+ #if UMI_EARLY_TRACE
+-		if (upto <= STARTUP_SUB_KPRINTF && umi_trace_console_address) {
++		if (umi_trace_console_address) {
+ 			umi_early_trace(0x50, (unsigned long)cur->func, umi_trace_console_address);
+ 		}
+ #endif
+ 		cur->func(cur->arg);
+ #if UMI_EARLY_TRACE
+-		if (upto <= STARTUP_SUB_KPRINTF && umi_trace_console_address) {
++		if (umi_trace_console_address) {
+ 			umi_early_trace(0x51, (unsigned long)cur->func, umi_trace_console_address);
+ 		}
+ #endif
+@@ -446,12 +452,27 @@
+ 
+ 	code_signing_config_t cs_config;
+ 
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x43, (unsigned long)version, umi_trace_console_address);
++#endif
+ 	printf("%s\n", version); /* log kernel version */
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x44, 0, umi_trace_console_address);
++#endif
++
+ 
+ 	scale_setup();
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x45, 0, umi_trace_console_address);
++#endif
++
+ 
+ 	kernel_bootstrap_log("vm_mem_bootstrap");
+ 	vm_mem_bootstrap();
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x46, 0, umi_trace_console_address);
++#endif
++
+ 
+ 	machine_info.memory_size = (uint32_t)mem_size;
+ #if XNU_TARGET_OS_OSX
+diff --git a/osfmk/kern/debug.c b/osfmk/kern/debug.c
+--- a/osfmk/kern/debug.c
++++ b/osfmk/kern/debug.c
+@@ -54,6 +54,11 @@
+  * the rights to redistribute these changes.
+  */
+ 
++#include "../arm64/umi_early_trace_config.h"
++#if UMI_EARLY_TRACE
++extern void umi_early_trace(unsigned long phase, unsigned long value, unsigned long console);
++extern unsigned long umi_trace_console_address;
++#endif
+ #include <mach_assert.h>
+ #include <mach_kdp.h>
+ #include <kdp/kdp.h>
+@@ -1134,6 +1139,16 @@
+ {
+ #pragma clang diagnostic pop
+ 
++#if UMI_EARLY_TRACE
++	umi_early_trace(0xa0, (unsigned long)panic_format_str, umi_trace_console_address);
++#endif
++#if UMI_EARLY_TRACE
++	umi_early_trace(0xa1, panic_caller, umi_trace_console_address);
++#endif
++#if UMI_EARLY_TRACE
++	umi_early_trace(0xa2, reason, umi_trace_console_address);
++#endif
++
+ #if defined(__x86_64__) && (DEVELOPMENT || DEBUG)
+ 	read_lbr();
+ #endif

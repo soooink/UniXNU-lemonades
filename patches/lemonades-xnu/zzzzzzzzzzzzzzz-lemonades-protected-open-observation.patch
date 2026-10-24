@@ -1,0 +1,19 @@
+--- a/bsd/vfs/vfs_syscalls.c
++++ b/bsd/vfs/vfs_syscalls.c
+@@ -5003,6 +5003,8 @@
+  *
+  * int open_dprotected_np(user_addr_t path, int flags, int class, int dpflags, int mode)
+  */
++#include "../../osfmk/arm64/umi-userspace-api.h"
++
+ static int
+ openat_dprotected_internal(vfs_context_t ctx, user_addr_t path, int flags, int mode,
+     int class, int dpflags, int fd, int authfd, enum uio_seg segflg, int *retval)
+@@ -5062,6 +5064,7 @@
+ 
+ 	error = open1at(vfs_context_current(), &nd, flags, &va,
+ 	    NULL, NULL, retval, fd, authfd);
++	if (segflg == UIO_USERSPACE) umi_user_path_observe(2, path, error, fd);
+ 
+ 	return error;
+ }

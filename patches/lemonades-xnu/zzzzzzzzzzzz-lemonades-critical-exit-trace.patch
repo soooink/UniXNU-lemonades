@@ -1,0 +1,55 @@
+--- a/bsd/kern/kern_exit.c
++++ b/bsd/kern/kern_exit.c
+@@ -74,6 +74,7 @@
+  */
+ 
+ #include <machine/reg.h>
++#include <arm/thread.h>
+ #include <machine/psl.h>
+ #include <stdatomic.h>
+ 
+@@ -1835,6 +1836,44 @@
+ #endif /* DEVELOPMENT */
+ 
+ 	char *exit_reason_desc = exit_reason_get_string_desc(p->p_exit_reason);
++	/* Observe every fatal critical-process exit before coredump/sync.
++	 * All strings and saved registers below are kernel-owned. The original
++	 * crash policy and panic remain unchanged, including non-init children.
++	 */
++	{
++		extern void umi_exec_trace_record(unsigned, uint64_t, uint64_t, uint64_t,
++		    uint64_t, uint64_t, uint64_t);
++		unsigned length = 0;
++		while (exit_reason_desc && length < 768 && exit_reason_desc[length]) ++length;
++		umi_exec_trace_record(8, (uint32_t)proc_getpid(p), (uint32_t)rv,
++		    p->p_exit_reason ? p->p_exit_reason->osr_namespace : 0,
++		    p->p_exit_reason ? p->p_exit_reason->osr_code : 0,
++		    proc_getcsflags(p), length | ((uint64_t)(length == 768) << 32));
++		uint64_t name[4] = {0};
++		for (unsigned i = 0; i < sizeof(p->p_name) && i < sizeof(name) && p->p_name[i]; ++i)
++			name[i/8] |= (uint64_t)(uint8_t)p->p_name[i] << ((i & 7)*8);
++		umi_exec_trace_record(9, initproc_spawned, p == initproc,
++		    name[0], name[1], name[2], name[3]);
++		if (p == current_proc()) {
++			arm_saved_state_t *state = find_user_regs(current_thread());
++			if (state && is_saved_state64(state)) {
++				umi_exec_trace_record(12, get_saved_state_pc(state), get_saved_state_lr(state),
++				    get_saved_state_sp(state), get_saved_state_fp(state),
++				    get_saved_state_cpsr(state), (uint32_t)proc_getpid(p));
++				umi_exec_trace_record(14, (uint32_t)proc_getpid(p),
++				    get_saved_state_reg(state, 0), get_saved_state_reg(state, 1),
++				    get_saved_state_reg(state, 2), get_saved_state_reg(state, 3),
++				    get_saved_state_reg(state, 16));
++			}
++		}
++		for (unsigned offset = 0; offset < length; offset += 48) {
++			uint64_t text[6] = {0};
++			for (unsigned i = 0; i < 48 && offset + i < length; ++i)
++				text[i / 8] |= (uint64_t)(uint8_t)exit_reason_desc[offset+i] << ((i & 7)*8);
++			umi_exec_trace_record(0x30 + offset/48,
++			    text[0], text[1], text[2], text[3], text[4], text[5]);
++		}
++	}
+ 
+ 	if (p->p_exit_reason == OS_REASON_NULL) {
+ 		printf("pid %d exited -- no exit reason available -- (signal %d, exit %d)\n",

@@ -1,0 +1,9 @@
+{
+  "file": "PackedRamdisk.h",
+  "url": "https://raw.githubusercontent.com/UniXNU/DarwinBoot/85332b317ee80898fc78939ea64e6ca52d3837a3/DarwinBootPkg/Driver/PackedRamdisk.h",
+  "sha256": "8b3a326062baee88a179274e92df05a3a07792d25ef84daa23b71aa47b4a2326",
+  "bytes": 2829,
+  "repository": "https://github.com/UniXNU/DarwinBoot",
+  "commit": "85332b317ee80898fc78939ea64e6ca52d3837a3",
+  "note": "Unchanged upstream header for packed logical disks up to 1 TiB; dense allocation is still bounded by DarwinBoot window."
+}

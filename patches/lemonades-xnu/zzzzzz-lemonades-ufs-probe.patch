@@ -1,0 +1,22 @@
+--- a/iokit/bsddev/IOKitBSDInit.cpp
++++ b/iokit/bsddev/IOKitBSDInit.cpp
+@@ -30,6 +30,10 @@
+ #include <IOKit/IOService.h>
+ #include "../../osfmk/arm64/umi_early_trace_config.h"
+ #include "../../osfmk/arm64/umi_platform_power_config.h"
++#include "../../osfmk/arm64/umi_ufs_config.h"
++#if UMI_UFS_PROBE
++extern "C" void umi_ufs_probe(void);
++#endif
+ #if UMI_PMGR && UMI_EARLY_TRACE
+ extern "C" void umi_runtime_checkpoint(void);
+ #endif
+@@ -737,5 +741,8 @@
+     dev_t * root, u_int32_t * oflags )
+ {
++#if UMI_UFS_PROBE
++	umi_ufs_probe();
++#endif
+ #if UMI_PMGR && UMI_EARLY_TRACE
+ 	umi_runtime_checkpoint();
+ #endif

@@ -1,0 +1,27 @@
+version = 1
+
+[boot]
+timeout = -1
+fallback_timeout = 3600
+default = "xnu"
+rotate = 0
+connect_all = true
+
+[ui]
+title = "OnePlus 9R - DarwinBoot / XNU entry test"
+
+[kits]
+autoload = false
+
+[[entry]]
+id = "xnu"
+title = "Boot minimal XNU"
+type = "xnu"
+path = "Payloads/kernel.macho"
+args = "-v keepsyms=1 kt_fixed_zones=120"
+
+[[entry]]
+id = "reset"
+title = "Restart"
+type = "action"
+action = "reset"

@@ -1,0 +1,41 @@
+{
+  "attempt": 73,
+  "scope": "Restore source-defined reset pad configuration and preserve inherited regulator enable pad drive/pull; retain native GPI transport; passive data-path comparisons only.",
+  "reference_commit": "71b13e62f057a649b77fe4062feb73ee72ad609c",
+  "references": {
+    "out/lemonades/attempt-72-runtime/trace-decoded.json": "dc7e343e5890de37860937c5c1b877e562fa0d4337e83d365f2e6e3da50bde5e",
+    "out/lemonades/attempt-72-runtime/rea-scan-frame-evidence-final.json": "94e426404e1c094efd79a6ac96aa2f7e6e83064a0a2e1e44d074887695c5fc94",
+    "out/lemonades/attempt-72-runtime/recovery-xnu-startup-comparison.json": "12eb2c8ea43541ff75a259beb4af460ea96693551285ee38271abe154fe73876",
+    "out/lemonades/attempt-72-runtime/recovery-fa-a6-compare.txt": "80aacc713d71828cdb176b05dd8349640ec3f2c17c6e51e87e55b44471c3b037",
+    "out/lemonades/attempt-72-runtime/recovery-engine-full.txt": "e693ddde741d6e476e73ea36ab34dd15b36762d649c7e0215a64e328aaf26ae8",
+    "out/device/lemonades/20261020T040435517245Z/running.dts": "a1f247e397e40223d7b2b1f76b7a60bc536646f969f83a60fc3f53ac281a12ba",
+    "out/lemonades/research/fts-static-20261020/kernel/drivers/pinctrl/qcom/pinctrl-kona.c": "87014b0ea67da00fb7c78f543c0030647a546797a15f3192657d0ca5840820ff"
+  },
+  "firmware": {
+    "chip0": "0x3639",
+    "fw": "0x0128",
+    "svn": "0x4053",
+    "config": "0x004b",
+    "embedded_ftb_sha256": "f92262ada63cb2480a80f15e013adb052b26064c6af67bef6cebcd2b76126f1f",
+    "controller_flash_dump": false
+  },
+  "source_details": {
+    "reset_pad": "running.dts lines8956-8971: GPIO38/39 ts_active pull-up/8mA; previously only IRQ39 matched. GPIO69 regulator-fixed has no pinconf; preserve inherited drive/pull.",
+    "frame_fields": "ftsCore.c readSysInfo derives raw/filter/baseline offsets136/138/142,144/146/150,152/154/158.",
+    "engine": "FW FUN_00019832 copies0xa4 bytes to0x20030000; two read-only pages, asynchronous, never written back. REA ev_a3f768dd4d2bcded9dbc463ff7f4edcb72cb24016dc5ff4cbc13cc4b49bb79d6.",
+    "FA_alias": "Native Recovery A6offset and FA20010000+offset produce matching MS/SS raw samples. Limited to qualified firmware."
+  },
+  "observations": [
+    "Attempt72 entersHello but zero coordinates/reports. Frame processing counter634->2535 and TE transitions positive.",
+    "Native Recovery soft reset plus same four XNU startup commands yields normal nonuniform raw values; source command sequence is viable.",
+    "Original driver F1 reset/force mode trace contains A2 feature resets, but they are absent on ordinary force0 boot and the minimal-sequence comparison works without them."
+  ],
+  "unknowns": [
+    "Reset pin correction is source-backed; effect on touch is unverified.",
+    "Fixed CB6A/ADEA samples have no established semantic meaning; not evidence of a particular failed rail.",
+    "Paired A6/FA reads are sequential; differences alone do not prove corruption.",
+    "No analog voltage measurement; no controller firmware/calibration writes."
+  ],
+  "qemu_test_performed": false,
+  "hardware_test_pending": true
+}

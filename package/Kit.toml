@@ -1,0 +1,13 @@
+# Minimal EFI baseline metadata; full phone drivers are linked by the bring-up tools.
+# The EFI diagnostic volume keeps kit autoload disabled.
+schema = 1
+
+[kit]
+name = "lemonades"
+version = "0.1.0"
+description = "OnePlus 9R minimal EFI baseline metadata"
+
+[match]
+arch = "AARCH64"
+# Observed in lemonades's running FDT. This is a SoC-family match, not a unique model ID.
+fdt_compatible = ["qcom,kona"]

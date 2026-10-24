@@ -1,0 +1,16 @@
+diff --git a/osfmk/kern/debug.c b/osfmk/kern/debug.c
+--- a/osfmk/kern/debug.c
++++ b/osfmk/kern/debug.c
+@@ -750,6 +750,12 @@
+ 	const char      *expression
+ 	)
+ {
++#if UMI_EARLY_TRACE
++	umi_early_trace(0xb0, (unsigned long)file, umi_trace_console_address);
++	umi_early_trace(0xb1, (unsigned long)line, umi_trace_console_address);
++	umi_early_trace(0xb2, (unsigned long)expression, umi_trace_console_address);
++	umi_early_trace(0xb3, (unsigned long)__builtin_return_address(0), umi_trace_console_address);
++#endif
+ #if CONFIG_NONFATAL_ASSERTS
+ 	static TUNABLE(bool, mach_assert, "assertions", true);
+ 

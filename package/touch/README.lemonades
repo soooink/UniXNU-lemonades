@@ -1,0 +1,6 @@
+The 9R touch controller is a Synaptics S3908 on GENI I2C 0xa94000, address
+0x4B, IRQ 39, reset GPIO 38, supplies vdd_2v8 / vcc_1v8 (project 20828).
+The ST FTS files in this directory are the umi port's driver and are kept as
+the structural reference only; the 9R needs its own Synaptics transport and
+startup path before touch works under XNU. Until then, menu navigation on
+hardware uses the volume and power keys.

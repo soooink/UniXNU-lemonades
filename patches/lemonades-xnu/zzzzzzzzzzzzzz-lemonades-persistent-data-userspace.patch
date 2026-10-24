@@ -1,0 +1,68 @@
+--- a/bsd/kern/kern_exec.c
++++ b/bsd/kern/kern_exec.c
+@@ -7302,7 +7302,7 @@
+ 	 * sparse media. A sparse disk has no contiguous logical-byte address. */
+ 	if (!native_ram_block_volume_seed(XNU_OWNER_DATA_VOLUME_UUID, &device, device_path,
+ 	    sizeof(device_path), &base, &size, native_owner_data_seed_sha256)) { error = ENOENT; goto done; }
+-	if (!size || size > UINT64_C(0x80000000) || (size & 4095)) goto done;
++	if (!size || size > UINT64_C(0x10000000000) || (size & 4095)) goto done;
+ #else
+ 	device = mdevlookup(0);
+ 	if (device == NODEV || mdevgetrange(0, &base, &size) || base < VM_MIN_KERNEL_ADDRESS ||
+--- a/bsd/kern/sys_generic.c
++++ b/bsd/kern/sys_generic.c
+@@ -672,6 +672,8 @@
+ 	return error;
+ }
+ 
++#include "../../osfmk/arm64/umi-userspace-api.h"
++
+ int
+ write_internal(struct proc *p, int fd, user_addr_t buf, user_size_t nbyte,
+     off_t offset, int flags, guardid_t *puguard, user_ssize_t *retval)
+@@ -693,7 +695,9 @@
+ 		return EINVAL;
+ 	}
+ 
+-	return writev_internal(p, fd, uio, flags, puguard, retval);
++	int umi_error = writev_internal(p, fd, uio, flags, puguard, retval);
++	umi_user_write_observe(fd, buf, nbyte, umi_error);
++	return umi_error;
+ }
+ 
+ int
+--- a/bsd/vfs/vfs_syscalls.c
++++ b/bsd/vfs/vfs_syscalls.c
+@@ -5088,6 +5088,8 @@
+ 	           uap->class, uap->dpflags, AT_FDCWD, AUTH_OPEN_NOAUTHFD, UIO_USERSPACE, retval);
+ }
+ 
++#include "../../osfmk/arm64/umi-userspace-api.h"
++
+ static int
+ openat_internal(vfs_context_t ctx, user_addr_t path, int flags, int mode,
+     int fd, enum uio_seg segflg, int *retval)
+@@ -5115,6 +5117,7 @@
+ 	    segflg, path, ctx);
+ 
+ 	error = open1at(ctx, ndp, flags, vap, NULL, NULL, retval, fd, AUTH_OPEN_NOAUTHFD);
++	if (segflg == UIO_USERSPACE) umi_user_path_observe(2, path, error, fd);
+ 
+ 	kfree_type(typeof(*__open_data), __open_data);
+ 
+@@ -9765,6 +9768,7 @@
+ continue_lookup:
+ 	error = nameiat(&nd, fd);
+ 	if (error) {
++		if (segflg == UIO_USERSPACE) umi_user_path_observe(3, path, error, fd);
+ 		return error;
+ 	}
+ 	dvp = nd.ni_dvp;
+@@ -9859,6 +9863,7 @@
+ 		vnode_put(dvp);
+ 	}
+ 
++	if (segflg == UIO_USERSPACE) umi_user_path_observe(3, path, error, fd);
+ 	return error;
+ }
+ 

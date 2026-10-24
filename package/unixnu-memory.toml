@@ -1,0 +1,26 @@
+version = 1
+
+[boot]
+timeout = 5
+fallback_timeout = 3600
+default = "memory-diag"
+rotate = 0
+connect_all = true
+
+[ui]
+title = "OnePlus 9R - memory diagnostic"
+
+[kits]
+autoload = false
+
+[[entry]]
+id = "memory-diag"
+title = "Read memory maps"
+type = "efi"
+path = "Payloads/LemonadesMemoryDiag.efi"
+
+[[entry]]
+id = "reset"
+title = "Restart"
+type = "action"
+action = "reset"

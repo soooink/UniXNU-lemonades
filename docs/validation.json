@@ -1,0 +1,95 @@
+{
+  "schema": 2,
+  "date": "2026-10-23",
+  "device": "OnePlus 9R (lemonades)",
+  "soc": "SM8250",
+  "tested_variant": "12 GiB RAM / 256 GB storage",
+  "donor": {
+    "product": "iPad7,1",
+    "version": "17.7.11",
+    "build": "21H461"
+  },
+  "latest_attempt": 80,
+  "observations": {
+    "setup_ui": "Hello / Setup Assistant confirmed by the device owner",
+    "touch_working": true,
+    "touch_seconds": null,
+    "touch_polls": null,
+    "point_events": null,
+    "hid_reports": null,
+    "transport_errors": null,
+    "smp_attempt": 50,
+    "logical_cpus_online": 8,
+    "per_core_timer_at_120": [
+      181699,
+      196474,
+      101821,
+      24200,
+      23828,
+      14234,
+      11322,
+      12861
+    ],
+    "gpu_acceleration": false,
+    "touch_verification_source": "device owner confirmed working physical touch after attempt80 hardware test",
+    "touch_runtime_log_collected": false,
+    "setup_completion_verified": false,
+    "home_screen_verified": false,
+    "uefi_touch_verified": false,
+    "multi_touch_verified": false,
+    "suspend_resume_verified": false
+  },
+  "limitations": [
+    "Physical touch is confirmed by the device owner; attempt80 runtime coordinate/HID counters have not yet been collected.",
+    "Multi-touch, suspend/resume, UEFI menu touch, setup completion and home screen remain unverified.",
+    "The original boot console and device dumps remain private; this is a maintainer-reported summary.",
+    "Some retained RAM log records are incomplete; missing fields are not filled with zero.",
+    "Published sources remain a development snapshot; full image generation still requires local inputs and ABI/provenance records."
+  ],
+  "image_hashes": {
+    "kernel_sha256": "4e9803697c901a38a5152544483e55e6b72a141ee0ad2596f2f0d7bd8670db36",
+    "boot_image_sha256": "05f41851c309082f009b80b59e7482941623ea4c326caa3812114e060036e812",
+    "boot_partition_sha256": "53563a708a3a3fb4518db68e679a4bbcc01585cb84aaa03f68356771d3cb5c75",
+    "runtime_log_sha256": null
+  },
+  "historical_touch_traces": [
+    {
+      "attempt": 65,
+      "touch_seconds": 141,
+      "touch_polls": 61963,
+      "point_events": 0,
+      "hid_reports": 0,
+      "transport_errors": 0,
+      "kernel_sha256": "74cf940a463956d9b63adeb44a94778fab832cdbbbd9df329474a66bf1670864",
+      "runtime_log_sha256": "ad08ef704926aa12cc6a93893ca8f90e5b41638b2a3f00f4602712dc83348f01"
+    },
+    {
+      "attempt": 79,
+      "touch_seconds": 261,
+      "touch_polls": 97004,
+      "point_events": 0,
+      "hid_reports": 0,
+      "transport_errors": 0,
+      "chip_errors": 0,
+      "board_boost_output_high": false,
+      "kernel_sha256": "f50bbb32931160fc4864d0e1436814e9e42e0617d046a1699d3ee7315f3d2c7f",
+      "runtime_log_sha256": "c4a66bd09bd18fc49a285b4bc89a1eb020d956c00c0a75245f2a313197adaa9d"
+    }
+  ],
+  "validation": {
+    "host_qualification_passed": true,
+    "host_command_count": 42,
+    "qualified_input_count": 56,
+    "source_package_matches_installed_archive": true,
+    "native_kernel_build_passed": true,
+    "full_boot_readback_verified": true,
+    "qemu_test_performed": false,
+    "data_header_bitmap_unchanged_during_install": true
+  },
+  "touch_fix": {
+    "commit": "138d6cb",
+    "native_reference_commit": "71b13e62f057a649b77fe4062feb73ee72ad609c",
+    "change": "Enable native always-on PM8150B GPIO5 before FTS startup; guard exact identity/configuration and EE0 ownership, wait4000us and verify readback.",
+    "analog_voltage_measured": false
+  }
+}

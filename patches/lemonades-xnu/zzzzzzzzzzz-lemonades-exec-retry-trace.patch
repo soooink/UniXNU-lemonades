@@ -1,0 +1,22 @@
+--- a/osfmk/arm64/sleh.c
++++ b/osfmk/arm64/sleh.c
+@@ -643,6 +643,19 @@
+ 	}
+ #endif
+ 	bool is_user = PSR64_IS_USER(get_saved_state_cpsr(state));
++	/* CPU0 bring-up: record one sustained retry, without changing fault handling. */
++	static uint64_t umi_retry_pc, umi_retry_far;
++	static uint32_t umi_retry_esr, umi_retry_count;
++	if (!is_user && (class == ESR_EC_DABORT_EL1 || class == ESR_EC_IABORT_EL1)) {
++		uint64_t pc = get_saved_state_pc(state);
++		if (pc == umi_retry_pc && far == umi_retry_far && esr == umi_retry_esr) {
++			if (umi_retry_count < 64 && ++umi_retry_count == 64)
++				umi_exec_trace_record(7, pc, get_saved_state_cpsr(state), esr, far,
++				    (uint32_t)proc_selfpid(), get_saved_state_lr(state));
++		} else {
++			umi_retry_pc = pc; umi_retry_far = far; umi_retry_esr = esr; umi_retry_count = 1;
++		}
++	}
+ 	if (is_user && class != ESR_EC_SVC_64 && class != ESR_EC_SVC_32)
+ 		umi_exec_trace_record(4, get_saved_state_pc(state), get_saved_state_cpsr(state),
+ 		    esr, far, (uint32_t)proc_selfpid(), get_saved_state_lr(state));

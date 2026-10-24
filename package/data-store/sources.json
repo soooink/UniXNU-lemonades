@@ -1,0 +1,22 @@
+{
+  "ram_commit": "7194961a668e59018323b626be4fd7ce0a91e78f",
+  "ufs_commit": "af785c1777161a62931425c2faaa536ce0bebd5b",
+  "superproject": "fb2bb310564ce66779e472a021881cf7c5764919",
+  "files": {
+    "devices/lemonades/package/data-store/NativeRamBlock/NativeRamBlock.cpp": "fb61d6c0ce13570d55e0019bb44c4fd56893d943b014f2903d6cf38affed0ab0",
+    "devices/lemonades/package/data-store/NativeRamBlock/SparseDisk.h": "5ab6516488b7daaef88e788fffef17195e7d2f74746da2206c6d9ed3a63c8c74",
+    "devices/lemonades/package/data-store/NativeRamBlock/PersistOverlay.h": "288b973e992a14c415539bfea268702d3fbda6184a6d71daffe6bca24963ca02",
+    "devices/lemonades/package/data-store/NativeRamBlock/DirectDisk.h": "5ff2dd31787553182dc02ff7b8ff3478c8a268c2979763b52b72ca206a9d3f8c",
+    "devices/lemonades/package/data-store/NativeRamBlock/SeedDisk.h": "d8a654529b5d56703bcf491c3834b407590995eebcb7a26004448990c200e4a0",
+    "devices/lemonades/package/data-store/NativeRamBlock/LICENSE": "5b1d3d911103cb0f41641ec0964c5ac1f7e229f57aa072b6ac38bae913a1307b",
+    "devices/lemonades/package/data-store/packed_ramdisk.py": "a216e05921c985d48339157146285bdddf4757bc8219cea0edf9377d16aac917",
+    "devices/lemonades/package/data-store/seed-data-grow.py": "507bce30053936608ebf4d5b7de75397d7e544934a9949a071a244cc0a3c810c",
+    "devices/lemonades/package/data-store/UfsStore.inc": "f3680cdbeb0669757030ab5630583559cda74c7afe0036c09e184c5cc904bc9d",
+    "devices/lemonades/package/data-store/NativeRamBlock/Test/direct.cpp": "3abee93350188b8513a50c49be2ee51ee5361eabd3822d2b0424ee58070fc98e",
+    "devices/lemonades/package/data-store/NativeRamBlock/Test/persist.cpp": "6ef3dd97efcbe593ed5dc7ef9fae438851b0646515f3becc3b608c1130e6194a",
+    "devices/lemonades/package/data-store/NativeRamBlock/Test/seed-identity.cpp": "9adb7e8c5a2245eaa487c56067bcbec55795ff7e4f12c0b0779b3d8f43037802",
+    "devices/lemonades/package/data-store/NativeRamBlock/Test/seeddisk.cpp": "ff6e37daad02fd41d602a04a8423d60ed13353b35ee818eb0a655bbb976da1ed",
+    "devices/lemonades/package/data-store/NativeRamBlock/Test/sparse.cpp": "715f5579020260b40905229b5c245ec42c27c2312962496909bea73bc06226ff",
+    "devices/lemonades/package/data-store/NativeRamBlock/Test/packed-hash.cpp": "fd1c690c985a874ed3fa966f3e411dfab0a8c1f9bd00002eb8c0bf2a4f846b00"
+  }
+}

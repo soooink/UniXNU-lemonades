@@ -1,0 +1,46 @@
+diff --git a/pexpert/arm/pe_init.c b/pexpert/arm/pe_init.c
+--- a/pexpert/arm/pe_init.c
++++ b/pexpert/arm/pe_init.c
+@@ -3,6 +3,11 @@
+  *
+  *    arm platform expert initialization.
+  */
++#include "../../osfmk/arm64/umi_early_trace_config.h"
++#if UMI_EARLY_TRACE
++extern void umi_early_trace(unsigned long phase, unsigned long value, unsigned long console);
++extern unsigned long umi_trace_console_address;
++#endif
+ #include <sys/types.h>
+ #include <sys/kdebug.h>
+ #include <mach/vm_param.h>
+@@ -528,17 +533,29 @@
+ void
+ PE_create_console(void)
+ {
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x60, PE_state.video.v_baseAddr, umi_trace_console_address);
++#endif
+ 	/*
+ 	 * Check the head of VRAM for a panic log saved on last panic.
+ 	 * Do this before the VRAM is trashed.
+ 	 */
+ 	check_for_panic_log();
+-
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x61, gPanicBase, umi_trace_console_address);
++#endif
++
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x62, PE_state.video.v_display, umi_trace_console_address);
++#endif
+ 	if (PE_state.video.v_display) {
+ 		PE_initialize_console(&PE_state.video, kPEGraphicsMode);
+ 	} else {
+ 		PE_initialize_console(&PE_state.video, kPETextMode);
+ 	}
++#if UMI_EARLY_TRACE
++	umi_early_trace(0x63, 0, umi_trace_console_address);
++#endif
+ }
+ 
+ int

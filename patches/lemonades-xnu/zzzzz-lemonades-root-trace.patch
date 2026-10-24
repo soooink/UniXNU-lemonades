@@ -1,0 +1,24 @@
+--- a/iokit/bsddev/IOKitBSDInit.cpp
++++ b/iokit/bsddev/IOKitBSDInit.cpp
+@@ -28,6 +28,11 @@
+ #include <IOKit/IOBSD.h>
+ #include <IOKit/IOLib.h>
+ #include <IOKit/IOService.h>
++#include "../../osfmk/arm64/umi_early_trace_config.h"
++#include "../../osfmk/arm64/umi_platform_power_config.h"
++#if UMI_PMGR && UMI_EARLY_TRACE
++extern "C" void umi_runtime_checkpoint(void);
++#endif
+ #include <IOKit/IOCatalogue.h>
+ #include <IOKit/IODeviceTreeSupport.h>
+ #include <IOKit/IOKitKeys.h>
+@@ -731,6 +736,9 @@
+ IOFindBSDRoot( char * rootName, unsigned int rootNameSize,
+     dev_t * root, u_int32_t * oflags )
+ {
++#if UMI_PMGR && UMI_EARLY_TRACE
++	umi_runtime_checkpoint();
++#endif
+ 	mach_timespec_t     t;
+ 	IOService *         service;
+ 	IORegistryEntry *   regEntry;

@@ -1,0 +1,22 @@
+--- a/bsd/kern/bsd_init.c
++++ b/bsd/kern/bsd_init.c
+@@ -1245,16 +1245,19 @@
+ volatile int native_owner_root_readonly = -1;
+ volatile dev_t native_owner_root_mount_device = NODEV;
+ volatile dev_t native_owner_root_selected_device = NODEV;
++#include "../../osfmk/arm64/umi-root-trace.h"
+ void native_owner_root_accepted_checkpoint(int, int);
+ __attribute__((noinline)) void
+ native_owner_root_accepted_checkpoint(int apple, int owner)
+ {
++	umi_owner_root_record(2);
+ 	__asm__ volatile("" : : "r"(apple), "r"(owner) : "memory");
+ }
+ void native_owner_root_checkpoint(int, int, dev_t);
+ __attribute__((noinline)) void
+ native_owner_root_checkpoint(int apple, int owner, dev_t device)
+ {
++	umi_owner_root_record(1);
+ 	__asm__ volatile("" : : "r"(apple), "r"(owner), "r"(device) : "memory");
+ }
+ #endif

@@ -1,0 +1,112 @@
+{
+  "native_commit": "71b13e62f057a649b77fe4062feb73ee72ad609c",
+  "sources": [
+    {
+      "path": "drivers/dma/qcom/gpi.c",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/drivers/dma/qcom/gpi.c?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "bytes": 83099,
+      "sha256": "dac8739a257c48882718aa05fa83d74633a687dae6d14254263b313e44b9415b"
+    },
+    {
+      "path": "include/linux/msm_gpi.h",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/include/linux/msm_gpi.h?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "bytes": 8515,
+      "sha256": "51fa854bee4eadf033e5218632d59169b1921bda7bd12f0ec75f7bbce05d21fb"
+    },
+    {
+      "path": "drivers/clk/qcom/gcc-kona.c",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/drivers/clk/qcom/gcc-kona.c?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "bytes": 115577,
+      "sha256": "ed208678508c983d0989f1f135fac898c5a9a91c14af1fa42cd7ea2f24cd14cd"
+    },
+    {
+      "path": "include/dt-bindings/clock/qcom,gcc-kona.h",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/include/dt-bindings/clock/qcom,gcc-kona.h?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "bytes": 10232,
+      "sha256": "ec7b2a775a7f96a543c064c7fc733fb83ffa7e3dae3c4bb517200627ae5f7fed"
+    },
+    {
+      "path": "drivers/dma/qcom/msm_gpi_mmio.h",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/drivers/dma/qcom/msm_gpi_mmio.h?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "bytes": 8992,
+      "sha256": "315c493a48c2b72bc8b94c0fa0359a87d5a82e301d325cf23e10ecc345cfad50"
+    }
+  ],
+  "reference": "ios-pandora/wsl/pandora_touch.c at d338ef09c93ba7e69d03e997478fe3ad3acda309",
+  "dt": {
+    "gpi_ee_base": "0xa00000",
+    "ee_offset": "0x6000",
+    "gpii_mask": "0x3f",
+    "se_local": 5,
+    "tx": 0,
+    "rx": 1,
+    "protocol": 3,
+    "streams": [
+      "0x56",
+      "0x43"
+    ]
+  },
+  "status": "hardware verification pending",
+  "clock_sources": [
+    {
+      "path": "drivers/clk/qcom/clk-rpmh.c",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/drivers/clk/qcom/clk-rpmh.c?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "bytes": 13841,
+      "sha256": "277ad99311a0e143a0cabcd07442ea278b38f5c31c9e565ac3efcc0e06234b85"
+    },
+    {
+      "path": "drivers/clk/qcom/clk-branch.c",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/drivers/clk/qcom/clk-branch.c?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "bytes": 10657,
+      "sha256": "375830dc9cd0ecbc12ea018eee1d260d8ba724dc52f1ac8b3589a07bc75d08aa"
+    },
+    {
+      "path": "drivers/soc/qcom/msm_bus/msm_bus_rpmh.c",
+      "error": "gh: Not Found (HTTP 404)\n"
+    },
+    {
+      "path": "drivers/soc/qcom/msm_bus/msm_bus_of_rpmh.c",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/drivers/soc/qcom/msm_bus/msm_bus_of_rpmh.c?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "bytes": 19002,
+      "sha256": "4b55e3a31e4c762ee686dc235ba755381bc8001d13c4e2b67d6bac4bbce83af2"
+    },
+    {
+      "path": "drivers/soc/qcom/msm_bus/msm_bus_arb_rpmh.c",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/drivers/soc/qcom/msm_bus/msm_bus_arb_rpmh.c?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "sha256": "e1642017752f56623d2a50992f353c98111da005845585725d025d2b433b20ec",
+      "bytes": 49116
+    },
+    {
+      "path": "drivers/soc/qcom/msm_bus/msm_bus_fabric_rpmh.c",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/drivers/soc/qcom/msm_bus/msm_bus_fabric_rpmh.c?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "sha256": "14563f3f965b030d68917b48b6185c2ff2b87f4f9de2ab212f2d8cb77b510bb7",
+      "bytes": 53370
+    },
+    {
+      "path": "drivers/soc/qcom/msm_bus/msm_bus_rpmh.h",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/drivers/soc/qcom/msm_bus/msm_bus_rpmh.h?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "sha256": "9a06eef8ff994581310677d1869927ea81dde55524203e90c503da0bc602eec9",
+      "bytes": 6573
+    },
+    {
+      "path": "drivers/clk/qcom/clk-rcg2.c",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/drivers/clk/qcom/clk-rcg2.c?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "sha256": "108707c1ae810817b2794ce19dc74e3e314f1bc72355438eee3853328db68a9f",
+      "bytes": 48770
+    }
+  ],
+  "attempt70_scope": "Match native HWCG halt semantics and XO bypass/HID1 rates; record clock substeps. BCM interconnect voting not changed without exact failure evidence.",
+  "smmu_sources": [
+    {
+      "path": "drivers/iommu/arm-smmu.c",
+      "url": "https://api.github.com/repos/LineageOS/android_kernel_xiaomi_sm8250/contents/drivers/iommu/arm-smmu.c?ref=71b13e62f057a649b77fe4062feb73ee72ad609c",
+      "bytes": 192924,
+      "sha256": "fce6b120442083cbbe9fc8e8b80e5250be89a1037bf60ee7dd7efa0157c7cdc0"
+    },
+    {
+      "path": "drivers/iommu/arm-smmu.h",
+      "error": "gh: Not Found (HTTP 404)\n"
+    }
+  ],
+  "attempt71_scope": "Accept unreferenced SCTLR.M=0 banks with retained disabled control bits, normalize SCTLR before binding GPI/QUP streams, preserve live UFS bank and all other referenced/enabled banks. Record 128-bank used/enabled/nonzero bitmaps and selected prior SCTLR. No QEMU; hardware verification pending."
+}

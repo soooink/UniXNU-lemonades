@@ -1,0 +1,32 @@
+{
+  "scope": "Passive firmware-qualified scan engine and TE observations. No controller register data writes, firmware update or calibration writes.",
+  "firmware": {
+    "chip0": "0x3639",
+    "fw": "0x0128",
+    "svn": "0x4053",
+    "config": "0x004b",
+    "embedded_ftb_sha256": "f92262ada63cb2480a80f15e013adb052b26064c6af67bef6cebcd2b76126f1f",
+    "controller_flash_dump": false
+  },
+  "evidence": {
+    "out/lemonades/attempt-72-preparation/rea-firmware-task-evidence.json": "ea5df685f1e7e11f42f0382ae9fab2b6c91830fbd5a6058b80254bf5c4476161",
+    "out/lemonades/attempt-72-preparation/task-symbol-derivation.json": "afc7131f730d95abc3bafe97cd01e36f204862a1f7477b64670f24bc4c749afa",
+    "out/lemonades/attempt-72-preparation/recovery-scan-registers.json": "3ae3264a21d3b4f95477bba88d66947df9519c026228fa7b7b86161f6a88630a"
+  },
+  "references": {
+    "0x20000050/51": "FUN_00004ee8 and FUN_00019832 read51 timer prescaler bits; native Recovery reads50/51=00/dc",
+    "0x20000060..65": "FUN_00004ee8, FUN_00019888 and FUN_00019832 timer values; native timer60 changes",
+    "0x20030000..07": "FUN_00019832 writes engine config; FUN_00019888 / FUN_000198a0 writes control06",
+    "0x200126ca..d1": "FUN_0001b31c reads ca,cb,cc,d0; neighboring bytes retained opaque",
+    "0x200156a8..b7": "readSysInfo debugInfoAddr=0x56a8, FUN_0001383c initializes; native low16 changes. Counter interpretation derived, not full field schema.",
+    "0x0f942000/4": "pinctrl-kona.c GPIO66 NORTH; running.dts primary display TE=66. Passive~2ms polling may miss pulses.",
+    "SPMI PM8150A L1 0x4045": "Read mode only, already in original driver register inventory; no mode writes."
+  },
+  "behavior_change": "Remove A4 06 30 LOAD_DATA diagnostic command from polling loop after it stopped completing on attempt71; normal 4 scan startup commands unchanged. No causal claim for original touch failure.",
+  "limitations": [
+    "REA decompilation derives control flow from embedded firmware, not runtime trace.",
+    "CPU SRAM FA reads at001004f8/00100780 repeated2868401c in Recovery and are excluded as unvalidated.",
+    "Zero sampled TE transitions does not prove no TE pulse.",
+    "No analog rail measurement; no proof of scanning from command echo."
+  ]
+}
