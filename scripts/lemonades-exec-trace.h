@@ -2,7 +2,7 @@
  * No user-memory reads, allocation, policy changes or fabricated results.
  */
 #include <stdint.h>
-#include "lemonades_early_trace_config.h"
+#include "umi_early_trace_config.h"
 void lemonades_exec_trace_record(unsigned, uint64_t, uint64_t, uint64_t,
     uint64_t, uint64_t, uint64_t);
 #ifdef LEMONADES_EXEC_TRACE_IMPLEMENTATION

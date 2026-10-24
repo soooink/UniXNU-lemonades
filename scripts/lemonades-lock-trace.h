@@ -3,7 +3,7 @@
  * The lock rule and panic remain unchanged.
  */
 #include <kern/backtrace.h>
-#include "../arm64/lemonades_early_trace_config.h"
+#include "../arm64/umi_early_trace_config.h"
 volatile uint64_t lemonades_lock_failure_observation[64];
 __attribute__((noinline)) void lemonades_lock_failure_checkpoint(void)
 {

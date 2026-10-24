@@ -2,7 +2,7 @@
 #ifndef LEMONADES_USERSPACE_API_H
 #define LEMONADES_USERSPACE_API_H
 #include <stdint.h>
-#include "lemonades_early_trace_config.h"
+#include "umi_early_trace_config.h"
 #if LEMONADES_EARLY_TRACE && XNU_BOOT_PROGRESS
 void lemonades_user_write_observe(int fd, uint64_t user_buffer, uint64_t bytes, int error);
 void lemonades_user_path_observe(unsigned operation, uint64_t user_path, int error, int fd);
