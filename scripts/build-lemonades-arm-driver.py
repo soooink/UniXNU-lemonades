@@ -59,6 +59,9 @@ while index < len(arguments):
 command.extend([
     "-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter", "-Wno-c99-designator",
     "-Wno-reorder-init-list", "-Wno-deprecated-enum-enum-conversion",
+    # The exported OSSymbol.h keeps a virtual method in a final class; newer
+    # clang (Xcode 26) turns that into -Wunnecessary-virtual-specifier.
+    "-Wno-unnecessary-virtual-specifier",
     "-I", str(ROOT / ".cache/xnu-work/osfmk"),
 ])
 if args.gic_diagnostics:
