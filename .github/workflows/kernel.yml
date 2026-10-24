@@ -1,0 +1,98 @@
+name: lemonades kernel
+
+# Build the source XNU kernel for the OnePlus 9R (lemonades) on a macOS
+# runner and upload kernel.macho as an artifact. The firmware and boot image
+# build on Linux (see docs/BUILD.md); only the kernel needs macOS.
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Kernel profile (bringup/tools/build_lemonades_xnu.py)
+        type: choice
+        options:
+          - phone
+          - qemu
+        default: phone
+      stage:
+        description: Build stage
+        type: choice
+        options:
+          - all
+          - bootstrap
+          - libraries
+          - kernel
+        default: all
+
+permissions:
+  contents: read
+
+jobs:
+  kernel:
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
+    steps:
+      - name: Check out the device repository
+        uses: actions/checkout@v4
+        with:
+          path: device
+
+      - name: Check out the pinned sources
+        run: |
+          PIN_UNIXNU=$(python3 -c "import json;print(json.load(open('device/source-lock.json'))['UniXNU'])")
+          PIN_SHENG=$(python3 -c "import json;print(json.load(open('device/source-lock.json'))['UniXNU-sheng'])")
+          git clone https://github.com/UniXNU/UniXNU UniXNU
+          git -C UniXNU checkout "$PIN_UNIXNU"
+          git -C UniXNU submodule update --init --recursive
+          git clone https://github.com/UniXNU/UniXNU-sheng UniXNU-sheng
+          git -C UniXNU-sheng checkout "$PIN_SHENG"
+          # The uefi checkout is not needed for the kernel stage; the setup
+          # tool requires it, so provide a shallow stand-in at any commit.
+          git clone --depth 1 https://github.com/${{ github.repository_owner }}/uefi-lemonades uefi-lemonades || \
+            git clone --depth 1 https://github.com/reAAAq/uefi-umi uefi-lemonades
+
+      - name: Install host tools
+        run: |
+          brew install llvm lld device-tree-compiler mtools
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+
+      - name: Set up the workspace
+        run: |
+          python3 device/bringup/setup-workspace.py \
+            --workspace work \
+            --unixnu UniXNU \
+            --uefi uefi-lemonades \
+            --sheng UniXNU-sheng
+
+      - name: Build the kernel
+        run: |
+          cd work
+          python3 tools/build_lemonades_xnu.py \
+            --stage "${{ inputs.stage || 'all' }}" \
+            --profile "${{ inputs.profile || 'phone' }}" \
+            -j 3
+
+      - name: Collect artifacts
+        if: always()
+        run: |
+          mkdir -p artifacts
+          find work/out -name "*.macho" -exec cp {} artifacts/ \; 2>/dev/null || true
+          find work/out -name "*.adt" -exec cp {} artifacts/ \; 2>/dev/null || true
+          find work/out -name "*.log" -exec cp {} artifacts/ \; 2>/dev/null || true
+
+      - name: Upload the kernel
+        uses: actions/upload-artifact@v4
+        with:
+          name: lemonades-kernel
+          path: artifacts/
+          if-no-files-found: error
+
+      - name: Upload the full log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lemonades-kernel-log
+          path: work/out/**/*.log
+          if-no-files-found: ignore
