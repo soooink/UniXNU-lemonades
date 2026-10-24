@@ -18,7 +18,7 @@ def rel(p):
     """Report path names must stay stable when the device repo is a symlink
     that resolves outside the workspace (the CI checkout layout)."""
     try:
-        return str(rel(p))
+        return str(p.relative_to(ROOT))
     except ValueError:
         return "../" + str(p)
 sys.path.insert(0, str(ROOT / "sources/UniXNU/scripts"))
