@@ -57,7 +57,7 @@ jobs:
 
       - name: Install host tools
         run: |
-          brew install llvm lld device-tree-compiler mtools
+          brew install llvm lld dtc mtools
           echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
 
       - name: Set up the workspace
