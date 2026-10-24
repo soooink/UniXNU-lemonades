@@ -94,7 +94,8 @@ title = "OnePlus 9R - XNU bring-up"
 # Sum of the three observed FDT DRAM banks (0x80000000+0x39900000,
 # 0xc0000000+0x140000000, 0x200000000+0x180000000) - identical to the umi map.
 dram_size = "0x2f9900000"
-panic_screen = false
+# Entry probe: the kernel paints stage bars at entry so the screen shows how far early boot gets.
+panic_screen = true
 timeout = -1
 kernel_args = ["-v", "keepsyms=1", "kt_fixed_zones=120"]
 
