@@ -12,6 +12,15 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def rel(p):
+    """Report path names must stay stable when the device repo is a symlink
+    that resolves outside the workspace (the CI checkout layout)."""
+    try:
+        return str(rel(p))
+    except ValueError:
+        return "../" + str(p)
 sys.path.insert(0, str(ROOT / "sources/UniXNU/scripts"))
 from unixnu import feeds, tree
 from unixnu.cli import parser as upstream_parser
@@ -191,7 +200,7 @@ def main():
                    ROOT / "devices/lemonades/package/boot-progress/LemonadesUserWire.h",
                    ROOT / "devices/lemonades/package/boot-progress/BootUiTraceProbe.c",
                    ROOT / "devices/lemonades/package/boot-progress/LemonadesWaitTrace.h"]
-    report["userspace_observers"] = {str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in user_inputs}
+    report["userspace_observers"] = {str(rel(p)):hashlib.sha256(p.read_bytes()).hexdigest() for p in user_inputs}
     prelink_input = settings["XNU_CRYPTO_BOOTSTRAP"] == "prelinked"
     prefix = ("qemu-" if args.profile == "qemu" else "") + ("prelink-" if prelink_input else "")
     status = ctx.work / (prefix + "source-build-status.json")
@@ -342,25 +351,25 @@ def main():
         ]
         if all(p.is_file() for p in lock_inputs):
             report["lock_failure_trace"] = {
-                str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
+                str(rel(p)): hashlib.sha256(p.read_bytes()).hexdigest()
                 for p in lock_inputs
             }
     exec_inputs = [ROOT / "devices/lemonades/scripts/lemonades-exec-trace.h",
                    ROOT / "devices/lemonades/patches/lemonades-xnu/zzzzzzzzzz-lemonades-exec-trace.patch",
                    ROOT / "devices/lemonades/patches/lemonades-xnu/zzzzzzzzzzz-lemonades-exec-retry-trace.patch"]
     report["execution_trace"] = {
-        str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
+        str(rel(p)): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in exec_inputs
     }
     exit_patch = ROOT / "devices/lemonades/patches/lemonades-xnu/zzzzzzzzzzzz-lemonades-critical-exit-trace.patch"
-    report["critical_exit_trace"] = {str(exit_patch.relative_to(ROOT)):
+    report["critical_exit_trace"] = {str(rel(exit_patch)):
                                    hashlib.sha256(exit_patch.read_bytes()).hexdigest()}
     if args.systemos:
         inputs = [ROOT / "devices/lemonades/patches/lemonades-xnu/zzzzzzzzzzzzz-lemonades-systemos-trace.patch"]
         inputs += [ROOT / "sources/UniXNU/patches/xnu" / name for name in (
             "offline-owner-systemos-mount.patch", "offline-owner-boot-manifest.patch",
             "native-4k-signature-hash-cache.patch")]
-        report["systemos_sources"] = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
+        report["systemos_sources"] = {str(rel(p)): hashlib.sha256(p.read_bytes()).hexdigest()
                                      for p in inputs}
     report["success"] = True
     status.write_text(json.dumps(report, indent=2) + "\n")
