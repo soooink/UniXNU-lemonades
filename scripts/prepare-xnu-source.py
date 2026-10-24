@@ -34,15 +34,17 @@ def main():
     ufs = os.environ.get("LEMONADES_UFS_PROBE", "0")
     if ufs not in ("0", "1"):
         raise ValueError("LEMONADES_UFS_PROBE must be 0 or 1")
+    # The kernel patches include these files under their original umi names and
+    # reference the UMI_* macros; only the repo-side sources were renamed.
     trace_files = {
-        "lemonades_early_trace_config.h": f"#define LEMONADES_EARLY_TRACE {trace}\n".encode(),
-        "lemonades_platform_power_config.h": f"#define LEMONADES_PMGR {pmgr}\n".encode(),
-        "lemonades_ufs_config.h": f"#define LEMONADES_UFS_PROBE {ufs}\n".encode(),
-        "lemonades-early-trace.inc": (ROOT / "scripts/lemonades-early-trace.inc").read_bytes(),
-        "lemonades-root-trace.h": (ROOT / "scripts/lemonades-root-trace.h").read_bytes(),
-        "lemonades-lock-trace.h": (ROOT / "scripts/lemonades-lock-trace.h").read_bytes(),
-        "lemonades-exec-trace.h": (ROOT / "scripts/lemonades-exec-trace.h").read_bytes(),
-        "lemonades-userspace-api.h": (ROOT / "scripts/lemonades-userspace-api.h").read_bytes(),
+        "umi_early_trace_config.h": f"#define UMI_EARLY_TRACE {trace}\n".encode(),
+        "umi_platform_power_config.h": f"#define UMI_PMGR {pmgr}\n".encode(),
+        "umi_ufs_config.h": f"#define UMI_UFS_PROBE {ufs}\n".encode(),
+        "umi-early-trace.inc": (ROOT / "scripts/lemonades-early-trace.inc").read_bytes(),
+        "umi-root-trace.h": (ROOT / "scripts/lemonades-root-trace.h").read_bytes(),
+        "umi-lock-trace.h": (ROOT / "scripts/lemonades-lock-trace.h").read_bytes(),
+        "umi-exec-trace.h": (ROOT / "scripts/lemonades-exec-trace.h").read_bytes(),
+        "umi-userspace-api.h": (ROOT / "scripts/lemonades-userspace-api.h").read_bytes(),
     }
     for name, data in trace_files.items():
         target = work / "osfmk/arm64" / name
