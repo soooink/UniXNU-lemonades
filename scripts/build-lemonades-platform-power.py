@@ -88,7 +88,10 @@ while i < len(arguments):
     elif not arg.startswith('-W'):
         command.append(arg)
     i += 1
-command += ['-Wall', '-Wextra', '-Werror', '-Wno-unused-parameter', '-Wno-c99-designator',
+command += ['-Wall', '-Wextra', '-Werror', '-Wno-format',
+            # Xcode 26 makes the umi-era diagnostic format strings hard errors;
+            # they print observation slots only.
+            '-Wall', '-Wextra', '-Werror', '-Wno-unused-parameter', '-Wno-c99-designator',
             '-Wno-reorder-init-list', '-Wno-deprecated-enum-enum-conversion',
             '-I', OUT, '-I', ROOT / '.cache/xnu-work/osfmk']
 (OUT / 'compile-command.json').write_text(json.dumps([str(v) for v in command], indent=2) + '\n')
