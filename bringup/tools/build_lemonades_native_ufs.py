@@ -189,9 +189,13 @@ bool NativeUfs::start(IOService *provider)
           ' const struct vr_crypto *c, struct vr_view *v) { (void)e;(void)n;(void)k;(void)g;(void)c;(void)v; return VR_KEY; }\n'
           'int vr_verify_block(const struct vr_view *v, uint64_t b, const void *p, size_t s,'
           ' const struct vr_crypto *c) { (void)v;(void)b;(void)p;(void)s;(void)c; return VR_SIGNATURE; }\n')
-        subprocess.run(["xcrun","clang","-target","arm64-apple-ios17.0","-isysroot",
-                        subprocess.check_output(["xcrun","--sdk","iphoneos","--show-sdk-path"],text=True).strip(),
-                        "-I",str(abi),"-c",str(stub),"-o",str(OUT/"owner-root-stub.o")],check=True)
+        sdk=subprocess.check_output(["xcrun","--sdk","iphoneos","--show-sdk-path"],text=True).strip()
+        result=subprocess.run(["xcrun","clang","-target","arm64-apple-ios17.0","-isysroot",sdk,
+                        "-I",str(abi),"-I",str(UP/"kits/VerifiedRoot/include"),"-I",str(OUT),
+                        "-c",str(stub),"-o",str(OUT/"owner-root-stub.o")],capture_output=True,text=True)
+        if result.returncode:
+            print(result.stdout[-2000:],end=''); print(result.stderr[-2000:],file=sys.stderr,end='')
+            raise SystemExit(result.returncode)
         archive=OUT/"libNativeUfs.a"
         archive.unlink(missing_ok=True)
         subprocess.run(["xcrun","ar","rcs",str(archive),str(OUT/"NativeUfs.o"),str(OUT/"owner-root-stub.o")],check=True)
