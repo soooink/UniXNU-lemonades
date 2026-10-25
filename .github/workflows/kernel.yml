@@ -86,7 +86,7 @@ jobs:
             --stage "${{ inputs.stage || 'all' }}" \
             --profile "${{ inputs.profile || 'phone' }}" \
             --crypto-bootstrap "${{ inputs.crypto_bootstrap || 'prelinked' }}" \
-            --pmgr "${{ inputs.pmgr }}" \
+            ${{ inputs.pmgr == 'true' && '--pmgr' || '' }} \
             -j 3
 
       - name: Collect artifacts
