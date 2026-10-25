@@ -86,7 +86,7 @@ jobs:
       - name: Build the kernel
         run: |
           cd work
-          LEMONADES_SKIP_STORAGE_BINDING=1 python3 tools/build_lemonades_xnu.py \
+          LEMONADES_SKIP_STORAGE_BINDING=1 LEMONADES_BASH_X=${{ inputs.storage && '1' || '0' }} python3 tools/build_lemonades_xnu.py \
             --stage "${{ inputs.stage || 'all' }}" \
             --profile "${{ inputs.profile || 'phone' }}" \
             --crypto-bootstrap "${{ inputs.crypto_bootstrap || 'prelinked' }}" \

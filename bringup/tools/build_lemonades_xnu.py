@@ -269,7 +269,8 @@ def main():
             print("\n".join((logdir / (name + ".log")).read_text(errors="replace").splitlines()[-25:]))
             raise SystemExit(result.returncode)
 
-    build = ["bash", "scripts/build-xnu-4k-baseline.sh"]
+    build = ["bash", *(["-x"] if os.environ.get("LEMONADES_BASH_X") else []),
+            "scripts/build-xnu-4k-baseline.sh"]
     if args.stage in ("all", "bootstrap"):
         # This pass supplies compile records and symbol tables for the real providers.
         # It is not a runnable kernel and is never packaged as a payload.
