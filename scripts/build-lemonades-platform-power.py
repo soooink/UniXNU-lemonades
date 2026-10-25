@@ -158,9 +158,9 @@ for slot, name in enumerate(entries):
                 f'Native IOPMGR/IOService entry differs at {slot}')
 undefined = {n for n, _, k in symbols if k == 1 and 'ApplePMGR' in n}
 require(undefined == set(bindings), 'All and only audited original base imports')
-bindings.update({'_lemonades_original_pmgr_nub_create': 0xfffffff004a22568,
-                 '_lemonades_original_pmgr_nub_read': 0xfffffff004a24adc,
-                 '_lemonades_original_pmgr_nub_write': 0xfffffff004a230ec})
+bindings.update({'_umi_original_pmgr_nub_create': 0xfffffff004a22568,
+                 '_umi_original_pmgr_nub_read': 0xfffffff004a24adc,
+                 '_umi_original_pmgr_nub_write': 0xfffffff004a230ec})
 asm = OUT / 'original-bindings.S'
 asm.write_text(''.join(f'.globl {name}\n.set {name}, {va:#x}\n' for name, va in bindings.items()))
 sdk = run(['xcrun', '--sdk', 'iphoneos', '--show-sdk-path'], text=True).strip()
