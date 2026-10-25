@@ -358,7 +358,9 @@ def main():
             report["ufs_probe_build"] = json.loads((ctx.tree / "build/lemonades-ufs-probe/build-report.json").read_text())
         if args.native_ufs:
             report["native_ufs_build"] = json.loads((ctx.tree / "build/native-ufs/build-report.json").read_text())
-            report["root_policy_build"] = json.loads((ctx.tree / "build/lemonades-root-policy/build-report.json").read_text())
+            root_policy = ctx.tree / "build/lemonades-root-policy/build-report.json"
+            if args.owner_root != "off" or root_policy.is_file():
+                report["root_policy_build"] = json.loads(root_policy.read_text())
         if args.owner_root != "off":
             report["storage_providers_build"] = json.loads((ctx.tree / "build/lemonades-storage-providers/build-report.json").read_text())
         if data_input:
