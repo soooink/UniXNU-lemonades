@@ -313,8 +313,9 @@ def main():
             # Only refresh this compile-time mode for the library. Device
             # patches must be reversed as a series before reapplying them;
             # the kernel recipe and prepare hook handle that below.
-            (ctx.tree / ".cache/xnu-work/osfmk/arm64/lemonades_early_trace_config.h").write_text(
-                f"#define LEMONADES_EARLY_TRACE {int(args.early_trace)}\n")
+            # The kits sources include the umi-era config header name/macro.
+            (ctx.tree / ".cache/xnu-work/osfmk/arm64/umi_early_trace_config.h").write_text(
+                f"#define UMI_EARLY_TRACE {int(args.early_trace)}\n")
             run("pmgr", [sys.executable, "scripts/build-lemonades-platform-power.py",
                          "--candidate", str(ROOT / "out/lemonades-xnu/lemonades/kernel/kernel.macho"),
                          "--donor", str(ROOT / "out/lemonades-xnu/ipsw/21H461/kernelcache.decompressed")])
