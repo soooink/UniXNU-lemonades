@@ -177,6 +177,13 @@ ctor = sorted({line.split()[2].strip() for line in symtab.splitlines()
 require(len(ctor) == 1, f'Expected exactly one static initializer, got {ctor}')
 run([objcopy, '--remove-section=__DATA,__mod_init_func',
      f'--globalize-symbol={ctor[0]}', obj, late])
+late_syms = run([nm, late], text=True)
+(OUT / 'late-symbols.txt').write_text(late_syms)
+# The kernel link resolves the static initializer through the archive; make
+# sure it actually became global, not silently left local.
+ctor_line = next((l for l in late_syms.splitlines() if ctor[0] in l), '')
+require(ctor_line.split()[0][-1].isupper() if ctor_line else False,
+        f'Static initializer not global after objcopy: {ctor_line!r}\n{late_syms[-2000:]}')
 
 
 def text_section(blob):
