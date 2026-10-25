@@ -316,8 +316,13 @@ def main():
             # The kits sources include the umi-era config header name/macro.
             (ctx.tree / ".cache/xnu-work/osfmk/arm64/umi_early_trace_config.h").write_text(
                 f"#define UMI_EARLY_TRACE {int(args.early_trace)}\n")
+            candidate = ROOT / "out/lemonades-xnu/lemonades/kernel/kernel.macho"
+            if not candidate.is_file():
+                # A fresh workspace has no previously prelinked kernel; the
+                # archive's vtable audit accepts the plain source kernel too.
+                candidate = ctx.tree / "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf"
             run("pmgr", [sys.executable, "scripts/build-lemonades-platform-power.py",
-                         "--candidate", str(ROOT / "out/lemonades-xnu/lemonades/kernel/kernel.macho"),
+                         "--candidate", str(candidate),
                          "--donor", str(ROOT / "out/lemonades-xnu/ipsw/21H461/kernelcache.decompressed")])
         run("kernel", build)
         kernel = ctx.tree / "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf"
