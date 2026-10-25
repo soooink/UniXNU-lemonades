@@ -172,9 +172,29 @@ bool NativeUfs::start(IOService *provider)
         subprocess.run([sys.executable,str(script),"--directory",str(OUT)],check=True)
     else:
         print('storage binding skipped; base symbols resolve at the kernel link')
+        # Empty owner-root policy stub: vr_* always refuses and the policy
+        # table is empty, so configureVerification() takes its "no policies"
+        # path. vr_xnu_crypto stays null; nothing dereferences it then.
+        stub=OUT/"owner-root-stub.c"
+        stub.write_text(
+          '#include <stddef.h>\n'
+          '#include <stdint.h>\n'
+          '#include "verified_root.h"\n'
+          '#include "VerifiedBlockPolicy.h"\n'
+          'const struct vr_crypto vr_xnu_crypto = { NULL, NULL };\n'
+          'const uint8_t verified_root_key[395] = { 0 };\n'
+          'const NativeVerifiedBlockPolicy verified_root_policies[1] = { { NULL, 0 } };\n'
+          'const uint64_t verified_root_policy_count = 0;\n'
+          'int vr_open(const uint8_t *e, size_t n, const uint8_t k[395], uint64_t g,'
+          ' const struct vr_crypto *c, struct vr_view *v) { (void)e;(void)n;(void)k;(void)g;(void)c;(void)v; return VR_KEY; }\n'
+          'int vr_verify_block(const struct vr_view *v, uint64_t b, const void *p, size_t s,'
+          ' const struct vr_crypto *c) { (void)v;(void)b;(void)p;(void)s;(void)c; return VR_SIGNATURE; }\n')
+        subprocess.run(["xcrun","clang","-target","arm64-apple-ios17.0","-isysroot",
+                        subprocess.check_output(["xcrun","--sdk","iphoneos","--show-sdk-path"],text=True).strip(),
+                        "-I",str(abi),"-c",str(stub),"-o",str(OUT/"owner-root-stub.o")],check=True)
         archive=OUT/"libNativeUfs.a"
         archive.unlink(missing_ok=True)
-        subprocess.run(["xcrun","ar","rcs",str(archive),str(OUT/"NativeUfs.o")],check=True)
+        subprocess.run(["xcrun","ar","rcs",str(archive),str(OUT/"NativeUfs.o"),str(OUT/"owner-root-stub.o")],check=True)
     report={"profile":args.profile,"disk_write_path":True,"verified_block_policies":True,
         "data_store_source_sha256":sha(store_source),"data_store_generated_sha256":sha(OUT/"LemonadesUfsStore.inc"),
         "commands_sha256":sha(OUT/"RootCommands.h"),
