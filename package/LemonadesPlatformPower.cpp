@@ -31,7 +31,13 @@ __attribute__((noinline)) void lemonades_pmgr_checkpoint(void) {
   for (unsigned i = 0; i < 16; ++i)
     lemonades_early_trace(0x70 + i, lemonades_pmgr_observation[i], lemonades_trace_console_address);
 #endif
-  __asm__ volatile("" ::: "memory");
+  // Bring-up instrumentation: a silent checkpoint failure is indistinguishable
+  // from the service never running; panic with the observation slots instead.
+  panic("lemonades-pmgr checkpoint: obs %08x %08x %08x %08x %08x %08x %08x %08x",
+        lemonades_pmgr_observation[0], lemonades_pmgr_observation[1],
+        lemonades_pmgr_observation[2], lemonades_pmgr_observation[3],
+        lemonades_pmgr_observation[4], lemonades_pmgr_observation[5],
+        lemonades_pmgr_observation[6], lemonades_pmgr_observation[7]);
 }
 // Called at the root-volume lookup boundary, after ordinary platform matching.
 // Read existing driver counters; never manufacture readiness or interrupts.
