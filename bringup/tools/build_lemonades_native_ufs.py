@@ -128,9 +128,11 @@ bool NativeUfs::start(IOService *provider)
     # Populate the storage ABI headers from the IOStorageFamily feed (the
     # umi flow prepared out/.../storage-abi by hand once).
     abi = ROOT/"out/lemonades/storage-abi/include"
-    fam = TREE/"refer/IOStorageFamily"
-    if not fam.is_dir():
-        fam = next((TREE/"refer").glob("IOStorageFamily*"), fam)
+    fam = ROOT/"out/lemonades-xnu/IOStorageFamily"
+    if not (fam/"IOBlockStorageDevice.h").is_file():
+        fam.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["git","clone","-q","https://github.com/apple-oss-distributions/IOStorageFamily.git",str(fam)],check=True)
+        subprocess.run(["git","-C",str(fam),"checkout","-q","e45fbe30a7879e0b16e26dddb78538f1b00e0bff"],check=True)
     headers = abi/"IOKit/storage"
     headers.mkdir(parents=True, exist_ok=True)
     for path in fam.glob("*.h"):
