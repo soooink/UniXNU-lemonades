@@ -85,10 +85,14 @@ static bool hostBringUp(const char **why)
   gRootDiagnostic.stage="LUN capacity";
   uint8_t capacity[10]={0x25}; uint32_t scsi=0;
   if (hostScsi(0,capacity,10,true,8,200000,&scsi)!=kIOReturnSuccess ||
-      loadBe32(gHost.virt+kDataOffset)!=0x3b51fff ||
+      loadBe32(gHost.virt+kDataOffset)!=0x3adff7f ||
       loadBe32(gHost.virt+kDataOffset+4)!=4096) {
     *why="LUN geometry differs from hardware baseline"; return false;
   }
+  // lemonades (OnePlus 9R) LUN baseline, measured on-device 2026-10-25:
+  // /dev/block/sda = 252,941,697,024 bytes = 494,026,752 x 512 B sectors,
+  // 4096 B logical and physical blocks -> 61,753,344 blocks, last LBA
+  // 0x3ADFF7F. (The umi baseline was 0x3B51FFF; same SoC, different flash.)
   gHost.ready=true;
   return true;
 }
