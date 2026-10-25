@@ -47,9 +47,12 @@ fetch = ["KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1,SystemTrustC
 # then fill first_lba / last_lba here. lba_bytes is the UFS logical block size.
 # Measured on this handset 2026-10-25: /sys/block/sda/sda24 start=17883392,
 # size=476143320 (512-byte sectors) -> 4096-byte LBAs, inclusive.
+# 2026-10-25 (round-10 diag): confirmed against the live GPT read on the 9R
+# (UFS table "GPT/read userdata=221c20..3ae47fa"). The earlier 0x222000 /
+# 0x3adff7a pair was a miscalculation; the values below are the measured ones.
 [userdata]
-first_lba = 0x222000
-last_lba = 0x3adff7a
+first_lba = 0x221c20
+last_lba = 0x3ae47fa
 lba_bytes = 4096
 windows = [
   { name = "OS", component = "OS" },
