@@ -42,6 +42,7 @@ ENTRY_VA = 0xFFFFFFF00B9D0488        # LC_UNIXTHREAD pc, `b start_first_cpu`
 START_FIRST_CPU = 0xFFFFFFF00B9D205C
 MMU_ENABLE_VA = 0xFFFFFFF00B9D2330   # msr SCTLR_EL1, x0
 AFTER_MMU_VA = 0xFFFFFFF00B9D2350    # mov x0, #0x300000
+ENTRY_VARIANT = False      # storage-family entry: CPACR anchors moved, --no-reset only
 PANIC_VA = 0xFFFFFFF00BF69B04      # _panic
 VINFO_VA = 0xFFFFFFF00C0A2970      # _vinfo
 PANIC_CAVE_END = 0xFFFFFFF00B9D0FF0
@@ -278,13 +279,13 @@ def unixthread_pc(data):
     raise SystemExit('No LC_UNIXTHREAD in kernel')
 
 
-def rebase(kernel, data):
+def rebase(kernel, data, no_reset=False):
     """The probe sites are fixed offsets from the entry; shift them for another kernel build.
 
     _panic and _vinfo come from the symbol table when the kernel has one (the plain source
     kernel does); the retained candidate layout is the unshifted case.
     """
-    global ENTRY_VA, START_FIRST_CPU, MMU_ENABLE_VA, AFTER_MMU_VA, PANIC_VA, VINFO_VA, PANIC_CAVE_END, CAVES
+    global ENTRY_VA, START_FIRST_CPU, MMU_ENABLE_VA, AFTER_MMU_VA, PANIC_VA, VINFO_VA, PANIC_CAVE_END, CAVES, ENTRY_VARIANT
     delta = unixthread_pc(data) - ENTRY_VA
     if delta:
         ENTRY_VA += delta
@@ -301,6 +302,8 @@ def rebase(kernel, data):
         # Native bootstrap table-capacity checks can grow before SCTLR setup.
         # Locate the unique instruction sequence in this bounded entry body;
         # do not assume a constant offset from the Mach-O entry point.
+        global ENTRY_VARIANT
+        variant = ENTRY_VARIANT = False
         matches = []
         for va in range(START_FIRST_CPU, START_FIRST_CPU + 0x1000, 4):
             def instruction(at):
@@ -311,9 +314,24 @@ def rebase(kernel, data):
                     instruction(va + 0x24) == 0xD5181040):
                 matches.append(va)
         if len(matches) != 1:
+            # Storage image family: the high-memory GPT check and early-trace
+            # string loop are inlined between the ISB and the CPACR write, so
+            # the +0x20/+0x24 anchors moved. The SCTLR write + ISB pair is
+            # still the unique MMU-enable anchor; the +0x20 reset site is not.
+            variant = ENTRY_VARIANT = True
+            matches = []
+            for va in range(START_FIRST_CPU, START_FIRST_CPU + 0x1000, 4):
+                def instruction(at):
+                    return struct.unpack_from('<I', data, file_offset(at))[0]
+                if instruction(va) == 0xD5181000 and instruction(va + 4) == 0xD5033FDF:
+                    matches.append(va)
+        if len(matches) != 1:
             raise SystemExit('Require one verified SCTLR/ISB/CPACR entry sequence')
         MMU_ENABLE_VA = matches[0]
         AFTER_MMU_VA = MMU_ENABLE_VA + 0x20
+        if variant and not no_reset:
+            raise SystemExit('entry variant (storage family) supports --no-reset only: '
+                             'the +0x20 reset site is inside the inlined GPT check')
     if '_panic' in names and '_vinfo' in names:
         PANIC_VA = names['_panic']
         # Board diagnostics seed this ABI-compatible prefix from valid console
@@ -364,12 +382,14 @@ def main():
         raise SystemExit('--reset-before requires --reset-after')
     data = bytearray(args.kernel.read_bytes())
     load_segments(data)
-    kernel_names = rebase(args.kernel, data)
+    kernel_names = rebase(args.kernel, data, no_reset=args.no_reset)
 
     def word(va):
         return struct.unpack_from('<I', data, file_offset(va))[0]
 
-    expected = {ENTRY_VA: branch(ENTRY_VA, START_FIRST_CPU), MMU_ENABLE_VA: 0xD5181000, AFTER_MMU_VA: 0xD2A00600}
+    expected = {ENTRY_VA: branch(ENTRY_VA, START_FIRST_CPU), MMU_ENABLE_VA: 0xD5181000}
+    if not ENTRY_VARIANT:
+        expected[AFTER_MMU_VA] = 0xD2A00600
     for va, value in expected.items():
         if word(va) != value:
             raise SystemExit(f'{va:#x} holds {word(va):#010x}, expected {value:#010x}: not the kernel these probes are for')
