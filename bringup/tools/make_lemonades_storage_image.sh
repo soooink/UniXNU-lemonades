@@ -45,8 +45,11 @@ python3 kits/NativePrelink/emit_prelink.py \
   --root com.apple.filesystems.apfs \
   --root com.apple.AppleFSCompression.AppleFSCompressionTypeZlib
 
-# The pinned binding record must still describe this image's layout.
-python3 "$DEV/bringup/tools/verify_lemonades_storage_bindings.py" "$OUT/kernel.macho"
+# The pinned binding record must still describe this image's layout (and
+# family: the storage root set, selected through LEMONADES_STORAGE_RECORD on
+# the CI side so the archive's .set constants match this prelink).
+python3 "$DEV/bringup/tools/verify_lemonades_storage_bindings.py" \
+  "$OUT/kernel.macho" --record storage-bindings-storage.json
 
 # Entry probe: stage bars + panic screen, no reset probe.
 python3 "$DEV/scripts/patch-xnu-entry-probe.py" "$OUT/kernel.macho" --panic-screen --no-reset

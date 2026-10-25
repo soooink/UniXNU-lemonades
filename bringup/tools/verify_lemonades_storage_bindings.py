@@ -39,8 +39,12 @@ def record_path():
 
 
 def main():
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: verify_lemonades_storage_bindings.py KERNEL_MACHO")
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("kernel", type=Path, help="prelinked kernel Mach-O with its .json plan")
+    parser.add_argument("--record", default="storage-bindings.json",
+                        help="the binding record to verify against")
+    args = parser.parse_args()
     sys.path.insert(0, str(ROOT / "sources/UniXNU/kits/NativePrelink"))
     prelink_dir = None
     for base in (ROOT / "sources/UniXNU", ROOT.parent / "UniXNU"):
@@ -52,9 +56,16 @@ def main():
     sys.path.insert(0, str(prelink_dir))
     import native_prelink as np
 
-    kernel = Path(sys.argv[1]).resolve()
+    kernel = args.kernel.resolve()
     plan = json.loads(kernel.with_suffix(".json").read_text())
-    pinned = json.loads(record_path().read_text())
+    record_path = None
+    for candidate in (ROOT / "devices/lemonades/bringup" / args.record, ROOT / "bringup" / args.record):
+        if candidate.is_file():
+            record_path = candidate
+            break
+    if record_path is None:
+        raise SystemExit(f"storage binding record {args.record} not found")
+    pinned = json.loads(record_path.read_text())
     blob = kernel.read_bytes()
     image = np.macho(blob)
     exports = np.exports(blob, image)
@@ -62,6 +73,13 @@ def main():
     pure = by_name.get("___cxa_pure_virtual")
     if pure is None:
         raise SystemExit("kernel exports no ___cxa_pure_virtual; not the pinned donor layout")
+    # The record must describe this image's family: every root it was derived
+    # from must be among the modules this image actually merged.
+    if "roots" in pinned:
+        components = set(plan.get("components", []))
+        missing = [r for r in pinned["roots"] if r not in components]
+        if missing:
+            raise SystemExit(f"record roots {missing} absent from this image; stale record")
 
     extents = [e for e in plan["extents"] if e.get("module") == "com.apple.iokit.IOStorageFamily"]
     const = next(e for e in extents if e["segment"] == "__DATA_CONST")

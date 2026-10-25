@@ -227,9 +227,15 @@ bool NativeUfs::start(IOService *provider)
             raise SystemExit('public IOBlockStorageDevice dispatch shape changed: %d slots' % len(methods))
         # The CI workspace only carries tools/tests plus the device repository
         # (a symlink at devices/lemonades), so the record lives device-side.
-        record_path = ROOT / "devices/lemonades/bringup/storage-bindings.json"
-        if not record_path.is_file():
-            record_path = ROOT / "bringup/storage-bindings.json"
+        # The record must match the image family that will be flashed: the
+        # storage prelink adds the APFS/compression roots and moves the
+        # exported method addresses, so LEMONADES_STORAGE_RECORD selects it.
+        record_name=__import__('os').environ.get('LEMONADES_STORAGE_RECORD') or 'storage-bindings.json'
+        record_path=None
+        for candidate in (ROOT/"devices/lemonades/bringup"/record_name, ROOT/"bringup"/record_name):
+            if candidate.is_file():
+                record_path=candidate; break
+        assert record_path, f"storage binding record {record_name} not found"
         pinned = json.loads(record_path.read_text())
         if pinned['donor_kernelcache_sha256'] != 'f18b4df865405f2a287b84977d7aca745e056d656d9fc9df1662970ce2969de7':
             raise SystemExit('pinned storage record provenance mismatch')
