@@ -126,6 +126,10 @@ for segment in info['segments']:
 entries = [relocations.get(vtable + 16 + i * 8) for i in range(340)]
 require(all(entries) and vtable + 16 + 340 * 8 not in relocations, 'Exact 340-entry provider table')
 reference = a.candidate
+if reference is None:
+    # No prelink plan on a fresh workspace; the source kernel provides the
+    # same vtable layout for the late-binding table.
+    reference = ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf'
 candidate = reference.read_bytes()
 meta = macho(candidate)
 native_names = {n: va for va, names in exports(candidate, meta).items() for n in names}
