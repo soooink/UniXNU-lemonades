@@ -30,6 +30,10 @@ on:
           - prelinked
           - source
         default: prelinked
+      pmgr:
+        description: PMGR service integration (required by AMFI ConfigurationSettings)
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -82,6 +86,7 @@ jobs:
             --stage "${{ inputs.stage || 'all' }}" \
             --profile "${{ inputs.profile || 'phone' }}" \
             --crypto-bootstrap "${{ inputs.crypto_bootstrap || 'prelinked' }}" \
+            --pmgr "${{ inputs.pmgr }}" \
             -j 3
 
       - name: Collect artifacts
