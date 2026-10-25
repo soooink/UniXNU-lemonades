@@ -148,7 +148,7 @@ bool NativeUfs::start(IOService *provider)
         "-I",str(TREE/".cache/xnu-work/osfmk"),
         "-I",str(UP/"kits/VerifiedRoot/include"),
         "-DNATIVE_VERIFIED_BLOCK=1","-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1",
-        "-DLEMONADES_UFS_PHONE="+str(int(args.profile=="phone")),
+        "-DUMI_UFS_PHONE="+str(int(args.profile=="phone")),
         # Xcode 26 promotes IOStorageFamily macro-diagnostics (keyword macro
         # parameters) to errors; the umi-qualified source builds clean on the
         # umi-era toolchain.
