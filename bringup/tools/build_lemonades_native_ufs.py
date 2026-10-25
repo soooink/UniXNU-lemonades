@@ -101,12 +101,22 @@ bool NativeUfs::start(IOService *provider)
         needle=f"  native_ufs_root_step = {step};\n"
         root=root.replace(needle,needle+"  umi_native_ufs_checkpoint();\n")
     needle="  native_ufs_root_step = 3;\n"
+    # The baseline geometry is this device's measured userdata, not the
+    # upstream sample's: the source constant pair is the umi baseline.
+    import tomllib
+    board_path=None
+    for candidate in (ROOT/"devices/lemonades/board.toml", ROOT/"board.toml"):
+        if candidate.is_file():
+            board_path=candidate; break
+    assert board_path, "board.toml not found"
+    board_userdata=tomllib.loads(board_path.read_text())["userdata"]
+    userdata_first=int(board_userdata["first_lba"]); userdata_last=int(board_userdata["last_lba"])
     root=root.replace(needle,needle+'''  if (layout->userdataFirst!=0x2c0000 || layout->userdataLast!=0x3b51ffa) {
     rootDiagnosticFailure("userdata differs from lemonades baseline");
     IOFree(layout,sizeof(RootLayout));
     return false;
   }
-''')
+''').replace("0x2c0000",hex(userdata_first)).replace("0x3b51ffa",hex(userdata_last))
     generated=OUT/"NativeUfs.cpp"
     store_source=ROOT/"devices/lemonades/package/data-store/UfsStore.inc"
     store=store_source.read_text()
@@ -215,7 +225,12 @@ bool NativeUfs::start(IOService *provider)
             methods.append(rloc[at]); at += 8
         if len(methods) != 190 or methods.count('___cxa_pure_virtual') != 14:
             raise SystemExit('public IOBlockStorageDevice dispatch shape changed: %d slots' % len(methods))
-        pinned = json.loads((ROOT / "bringup/storage-bindings.json").read_text())
+        # The CI workspace only carries tools/tests plus the device repository
+        # (a symlink at devices/lemonades), so the record lives device-side.
+        record_path = ROOT / "devices/lemonades/bringup/storage-bindings.json"
+        if not record_path.is_file():
+            record_path = ROOT / "bringup/storage-bindings.json"
+        pinned = json.loads(record_path.read_text())
         if pinned['donor_kernelcache_sha256'] != 'f18b4df865405f2a287b84977d7aca745e056d656d9fc9df1662970ce2969de7':
             raise SystemExit('pinned storage record provenance mismatch')
         for i, name in enumerate(methods):
