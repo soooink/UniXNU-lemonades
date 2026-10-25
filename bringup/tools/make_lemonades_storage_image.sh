@@ -13,8 +13,9 @@ U=$(dirname "$DEV")/UniXNU
 [ -d "$U" ] || { echo "UniXNU checkout not found next to $DEV"; exit 1; }
 cd "$U"
 
-# Host toolchain: llvm tools for the probe patch, lld shared-library shim.
-export PATH="$HOME/toolchain/LLVM-19.1.7-Linux-X64/bin:$PATH"
+# Host toolchain: llvm tools for the probe patch, lld shared-library shim,
+# and the user-level mtools for the FAT payload volume.
+export PATH="$HOME/toolchain/LLVM-19.1.7-Linux-X64/bin:$HOME/toolchain/local/usr/bin:$PATH"
 export LD_LIBRARY_PATH="$HOME/toolchain/compat"
 export UNIXNU_UEFI="$HOME/ROm/uefi-lemonades"
 
@@ -55,10 +56,22 @@ python3 "$DEV/bringup/tools/verify_lemonades_storage_bindings.py" \
 python3 "$DEV/scripts/patch-xnu-entry-probe.py" "$OUT/kernel.macho" --panic-screen --no-reset
 
 # Payload (ADT + FAT volume) and the boot image. To exercise the native UFS
-# root path on hardware, pass: EXTRA_ARGS="--kernel-arg native-ufs-root=1".
-python3 scripts/unixnu/cli.py build payload --kernel "$OUT/kernel.macho" \
-  --unique-chip-id 0x9E3779B97F4A7C15 ${EXTRA_ARGS:-}
-python3 scripts/unixnu/cli.py bootimg --ramdisk out/lemonades/payload/payload.img \
-  -o out/lemonades/boot/boot-storage.img
+# root path on hardware, add to the payload argv line below:
+#   '--kernel-arg','native-ufs-root=1',
+# (The cli module has no __main__ guard: import main() explicitly.)
+PAYLOAD_PY="
+import sys
+sys.argv=['unixnu','build','payload','--kernel','$OUT/kernel.macho','--unique-chip-id','0x9E3779B97F4A7C15']
+from unixnu.cli import main
+main()"
+PYTHONPATH="$U/scripts" python3 -c "$PAYLOAD_PY"
+# The stock three-DTB blob the 9R ABL accepts (kona v2.1 primary).
+DTC="$HOME/ROm/uefi-lemonades/Resources/DTBs/lemonades-full.dtb"
+BOOTIMG_PY="
+import sys
+sys.argv=['unixnu','bootimg','--ramdisk','out/lemonades/payload/payload.img','--dtb','$DTC','-o','out/lemonades/boot/boot-storage.img']
+from unixnu.cli import main
+main()"
+PYTHONPATH="$U/scripts" python3 -c "$BOOTIMG_PY"
 
 echo "FLASH: fastboot flash boot_b $U/out/lemonades/boot/boot-storage.img"
