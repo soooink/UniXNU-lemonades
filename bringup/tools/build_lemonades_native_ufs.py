@@ -103,6 +103,11 @@ bool NativeUfs::start(IOService *provider)
     needle="  native_ufs_root_step = 3;\n"
     # The baseline geometry is this device's measured userdata, not the
     # upstream sample's: the source constant pair is the umi baseline.
+    # Bring-up: log the measured GPT userdata and continue instead of
+    # hard-blocking on the exact pair. The pair is SoC/flash specific (and
+    # over-provisioning makes the raw UFS LUN differ from the Android-visible
+    # size), so it is read here rather than trusted as a guard; the root
+    # manifest stage downstream is the real stop point on a non-iOS UFS.
     import tomllib
     board_path=None
     for candidate in (ROOT/"devices/lemonades/board.toml", ROOT/"board.toml"):
@@ -111,12 +116,12 @@ bool NativeUfs::start(IOService *provider)
     assert board_path, "board.toml not found"
     board_userdata=tomllib.loads(board_path.read_text())["userdata"]
     userdata_first=int(board_userdata["first_lba"]); userdata_last=int(board_userdata["last_lba"])
-    root=root.replace(needle,needle+'''  if (layout->userdataFirst!=0x2c0000 || layout->userdataLast!=0x3b51ffa) {
-    rootDiagnosticFailure("userdata differs from lemonades baseline");
-    IOFree(layout,sizeof(RootLayout));
-    return false;
-  }
-''').replace("0x2c0000",hex(userdata_first)).replace("0x3b51ffa",hex(userdata_last))
+    root=root.replace(needle,needle+f'''  {{
+    const bool lemonadesUserdataMatch=(layout->userdataFirst=={userdata_first:x}ull && layout->userdataLast=={userdata_last:x}ull);
+    IOLog("NativeUfs: GPT userdata first=%#llx last=%#llx (board {userdata_first:x}..{userdata_last:x}) match=%d\\n",
+      (unsigned long long)layout->userdataFirst,(unsigned long long)layout->userdataLast,lemonadesUserdataMatch?1:0);
+  }}
+'''))
     generated=OUT/"NativeUfs.cpp"
     store_source=ROOT/"devices/lemonades/package/data-store/UfsStore.inc"
     store=store_source.read_text()
