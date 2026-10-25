@@ -23,6 +23,13 @@ on:
           - libraries
           - kernel
         default: all
+      crypto_bootstrap:
+        description: Crypto provider mode (source seals the POST HMAC; prelinked defers init to the donor OSKext startup)
+        type: choice
+        options:
+          - prelinked
+          - source
+        default: prelinked
 
 permissions:
   contents: read
@@ -74,6 +81,7 @@ jobs:
           python3 tools/build_lemonades_xnu.py \
             --stage "${{ inputs.stage || 'all' }}" \
             --profile "${{ inputs.profile || 'phone' }}" \
+            --crypto-bootstrap "${{ inputs.crypto_bootstrap || 'prelinked' }}" \
             -j 3
 
       - name: Collect artifacts
