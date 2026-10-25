@@ -125,6 +125,18 @@ bool NativeUfs::start(IOService *provider)
         shutil.copyfile(ROOT/"devices/lemonades/package"/name,OUT/name)
     shutil.copyfile(UP/"drivers/NativeVirtioBlock/VerifiedBlockPolicy.h",OUT/"VerifiedBlockPolicy.h")
     shutil.copyfile(UP/"drivers/NativeUfs/LICENSE",OUT/"LICENSE")
+    # Populate the storage ABI headers from the IOStorageFamily feed (the
+    # umi flow prepared out/.../storage-abi by hand once).
+    abi = ROOT/"out/lemonades/storage-abi/include"
+    fam = TREE/"refer/IOStorageFamily"
+    if not fam.is_dir():
+        fam = next((TREE/"refer").glob("IOStorageFamily*"), fam)
+    headers = abi/"IOKit/storage"
+    headers.mkdir(parents=True, exist_ok=True)
+    for path in fam.glob("*.h"):
+        shutil.copyfile(path, headers/path.name)
+    sdk = Path(subprocess.check_output(["xcrun","--sdk","macosx","--show-sdk-path"],text=True).strip())
+    shutil.copyfile(sdk/"usr/include/TargetConditionals.h", abi/"TargetConditionals.h")
     rec=TREE/"build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/iokit/DEVELOPMENT/IOPlatformExpert.cpo.json"
     record=json.loads(rec.read_text().strip().rstrip(","))
     compile_from(record,generated,OUT/"NativeUfs.o",[
