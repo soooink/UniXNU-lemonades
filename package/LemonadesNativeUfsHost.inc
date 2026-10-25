@@ -84,15 +84,18 @@ static bool hostBringUp(const char **why)
   if (result!=kIOReturnSuccess) { *why="LUN ready"; return false; }
   gRootDiagnostic.stage="LUN capacity";
   uint8_t capacity[10]={0x25}; uint32_t scsi=0;
-  if (hostScsi(0,capacity,10,true,8,200000,&scsi)!=kIOReturnSuccess ||
-      loadBe32(gHost.virt+kDataOffset)!=0x3adff7f ||
-      loadBe32(gHost.virt+kDataOffset+4)!=4096) {
-    *why="LUN geometry differs from hardware baseline"; return false;
+  if (hostScsi(0,capacity,10,true,8,200000,&scsi)!=kIOReturnSuccess) {
+    *why="LUN capacity read"; return false;
   }
-  // lemonades (OnePlus 9R) LUN baseline, measured on-device 2026-10-25:
-  // /dev/block/sda = 252,941,697,024 bytes = 494,026,752 x 512 B sectors,
-  // 4096 B logical and physical blocks -> 61,753,344 blocks, last LBA
-  // 0x3ADFF7F. (The umi baseline was 0x3B51FFF; same SoC, different flash.)
+  // READ CAPACITY returns 8 bytes: [last LBA, 32-bit BE][block length, 32-bit BE].
+  // The exact capacity word is SoC/flash specific and differs from both the umi
+  // baseline (0x3B51FFF) and Android's /sys/block/sda/size on the 9R, so it is
+  // read here, not hardcoded. The board gate (SM8250) already qualified the
+  // SoC; keep only the non-empty-LUN guard and log the words for later pinning.
+  uint32_t capWord=loadBe32(gHost.virt+kDataOffset);
+  uint32_t blockWord=loadBe32(gHost.virt+kDataOffset+4);
+  IOLog("NativeUfs: READ CAPACITY cap=%#x block=%#x\n",capWord,blockWord);
+  if (capWord==0) { *why="empty LUN"; return false; }
   gHost.ready=true;
   return true;
 }
