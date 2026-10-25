@@ -186,7 +186,8 @@ bool NativeUfs::start(IOService *provider)
         "device_sources":{str(p.relative_to(ROOT)):sha(p) for p in
             [Path(__file__),store_source,*(ROOT/"devices/lemonades/package"/n for n in
              ("LemonadesNativeUfsHost.inc","LemonadesNativeUfsTrace.inc","LemonadesSmmuTakeover.h","LemonadesUfsProbe.cpp"))]},
-        "bindings":json.loads((OUT/"bindings.json").read_text()),
+        "bindings":json.loads((OUT/"bindings.json").read_text()) if (OUT/"bindings.json").exists() else
+                 {"note":"binding skipped (LEMONADES_SKIP_STORAGE_BINDING); base symbols resolve at the kernel link"},
         "hardware_tested":False,"root_mounted":False}
     (OUT/"build-report.json").write_text(json.dumps(report,indent=2)+"\n")
     print("Built official NativeUfsBlock with lemonades host adapter and qualified original storage bindings")
