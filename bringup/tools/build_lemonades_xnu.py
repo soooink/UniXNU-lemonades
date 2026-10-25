@@ -41,8 +41,8 @@ def main():
                         help="build a separate lemonades entry diagnostic kernel with RAM-console markers")
     parser.add_argument("--profile", choices=("phone", "qemu"), default="phone",
                         help="qemu preserves the phone baseline and disables physical RAM-console tracing")
-    parser.add_argument("--crypto-bootstrap", choices=("source", "prelinked"),
-                        help="explicit provider mode for a separately named prelink input")
+    parser.add_argument("--crypto-bootstrap", choices=("source", "prelinked"), default="source",
+                        help="provider mode; source also seals the POST HMAC after the kernel link")
     parser.add_argument("--pmgr", action="store_true",
                         help="link lemonades's guarded original PMGR service integration")
     parser.add_argument("--gic-diagnostics", action="store_true",
