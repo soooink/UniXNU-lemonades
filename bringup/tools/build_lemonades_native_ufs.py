@@ -190,7 +190,7 @@ bool NativeUfs::start(IOService *provider)
           'int vr_verify_block(const struct vr_view *v, uint64_t b, const void *p, size_t s,'
           ' const struct vr_crypto *c) { (void)v;(void)b;(void)p;(void)s;(void)c; return VR_SIGNATURE; }\n')
         sdk=subprocess.check_output(["xcrun","--sdk","iphoneos","--show-sdk-path"],text=True).strip()
-        result=subprocess.run(["xcrun","clang","-target","arm64-apple-ios17.0","-isysroot",sdk,
+        result=subprocess.run(["xcrun","clang","-x","c++","-target","arm64-apple-ios17.0","-isysroot",sdk,
                         "-I",str(abi),"-I",str(UP/"kits/VerifiedRoot/include"),"-I",str(OUT),
                         "-c",str(stub),"-o",str(OUT/"owner-root-stub.o")],capture_output=True,text=True)
         if result.returncode:
