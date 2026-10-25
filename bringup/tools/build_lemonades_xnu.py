@@ -141,7 +141,9 @@ def main():
             settings.get("XNU_EXTRA_LD_ARCHIVES", "") + " " +
             str(ctx.tree / "build/lemonades-ufs-probe/libLemonadesUfsProbe.a")).strip()
     settings["XNU_NATIVE_UFS"] = str(int(args.native_ufs))
-    settings["XNU_VERIFIED_ROOT_PROBE"] = str(int(args.native_ufs))
+    # The verified-root probe links the owner-root policy archive; without
+    # the owner-root profile there is no policy archive to link.
+    settings["XNU_VERIFIED_ROOT_PROBE"] = str(int(args.native_ufs and args.owner_root != "off"))
     if args.native_ufs:
         settings["XNU_VERIFIED_ROOT_ARCHIVE"] = str(ctx.tree / "build/lemonades-root-policy/libVerifiedRootProbe.a")
     settings["XNU_OWNER_ROOT_AUDIT"] = str(int(args.owner_root != "off"))
