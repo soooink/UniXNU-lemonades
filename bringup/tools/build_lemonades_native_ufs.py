@@ -51,7 +51,7 @@ def main():
     header+='extern "C" void lemonades_native_ufs_checkpoint(void);\n'
     header+='extern "C" unsigned long gPhysBase, gPhysSize;\n'
     probe=(ROOT/"devices/lemonades/package/LemonadesUfsProbe.cpp").read_text()
-    helpers=probe[probe.index("static uint32_t lemonades_mmio_upper_seen;"):probe.index('#include "LemonadesUfsRead.inc"')]
+    helpers=probe[probe.index("static uint32_t umi_mmio_upper_seen;"):probe.index('#include "UmiUfsRead.inc"')]
     helpers=helpers.replace("static uintptr_t map(","static uintptr_t mapPhys(")
     helpers+="""
 static void write32(uintptr_t base,unsigned offset,uint32_t value)
@@ -122,7 +122,9 @@ bool NativeUfs::start(IOService *provider)
     commands=commands.replace("uint8_t cdb[10] = { 0x2a, 0,", "uint8_t cdb[10] = { 0x2a, uint8_t (fua ? 8 : 0),")
     (OUT/"RootCommands.h").write_text(commands)
     for name in ("LemonadesNativeUfsHost.inc","LemonadesNativeUfsTrace.inc","LemonadesSmmuTakeover.h"):
-        shutil.copyfile(ROOT/"devices/lemonades/package"/name,OUT/name)
+        data=(ROOT/"devices/lemonades/package"/name).read_text()
+        data=data.replace('#include "Umi','#include "Lemonades').replace('#include "UmiUfsRead.inc"','#include "LemonadesUfsRead.inc"')
+        (OUT/name).write_text(data)
     shutil.copyfile(UP/"drivers/NativeVirtioBlock/VerifiedBlockPolicy.h",OUT/"VerifiedBlockPolicy.h")
     shutil.copyfile(UP/"drivers/NativeUfs/LICENSE",OUT/"LICENSE")
     # Populate the storage ABI headers from the IOStorageFamily feed (the
