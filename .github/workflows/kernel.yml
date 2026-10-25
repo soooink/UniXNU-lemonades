@@ -35,7 +35,7 @@ on:
         type: boolean
         default: true
       storage:
-        description: Native UFS storage chain (native-ufs + owner-root trust + SystemOS windows)
+        description: Native UFS bring-up (ufs driver probe; the QEMU-qualified owner-root binding stays a later stage)
         type: boolean
         default: false
 
@@ -86,12 +86,12 @@ jobs:
       - name: Build the kernel
         run: |
           cd work
-          python3 tools/build_lemonades_xnu.py \
+          LEMONADES_SKIP_STORAGE_BINDING=1 python3 tools/build_lemonades_xnu.py \
             --stage "${{ inputs.stage || 'all' }}" \
             --profile "${{ inputs.profile || 'phone' }}" \
             --crypto-bootstrap "${{ inputs.crypto_bootstrap || 'prelinked' }}" \
             ${{ inputs.pmgr && '--pmgr' || '' }} \
-            ${{ inputs.storage && '--native-ufs --owner-root trust --systemos' || '' }} \
+            ${{ inputs.storage && '--native-ufs --early-trace' || '' }} \
             -j 3
 
       - name: Collect artifacts
