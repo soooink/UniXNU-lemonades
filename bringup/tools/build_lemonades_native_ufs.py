@@ -190,7 +190,9 @@ bool NativeUfs::start(IOService *provider)
           'int vr_open(const uint8_t *e, size_t n, const uint8_t k[395], uint64_t g,'
           ' const struct vr_crypto *c, struct vr_view *v) { (void)e;(void)n;(void)k;(void)g;(void)c;(void)v; return VR_KEY; }\n'
           'int vr_verify_block(const struct vr_view *v, uint64_t b, const void *p, size_t s,'
-          ' const struct vr_crypto *c) { (void)v;(void)b;(void)p;(void)s;(void)c; return VR_SIGNATURE; }\n')
+          ' const struct vr_crypto *c) { (void)v;(void)b;(void)p;(void)s;(void)c; return VR_SIGNATURE; }\n'
+          '// weak-declared in NativeUfs.cpp; Apple ld wants a definition in the final image\n'
+          'extern "C" void boot_progress_poll(void) {}\n')
         sdk=subprocess.check_output(["xcrun","--sdk","iphoneos","--show-sdk-path"],text=True).strip()
         result=subprocess.run(["xcrun","clang","-x","c++","-target","arm64-apple-ios17.0","-isysroot",sdk,
                         "-I",str(abi),"-I",str(UP/"kits/VerifiedRoot/include"),"-I",str(OUT),
