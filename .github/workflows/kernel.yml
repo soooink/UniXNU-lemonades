@@ -34,6 +34,10 @@ on:
         description: PMGR service integration (required by AMFI ConfigurationSettings)
         type: boolean
         default: true
+      storage:
+        description: Native UFS storage chain (native-ufs + owner-root trust + SystemOS windows)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -87,6 +91,7 @@ jobs:
             --profile "${{ inputs.profile || 'phone' }}" \
             --crypto-bootstrap "${{ inputs.crypto_bootstrap || 'prelinked' }}" \
             ${{ inputs.pmgr && '--pmgr' || '' }} \
+            ${{ inputs.storage && '--native-ufs --owner-root trust --systemos' || '' }} \
             -j 3
 
       - name: Collect artifacts
