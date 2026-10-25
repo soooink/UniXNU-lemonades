@@ -20,7 +20,7 @@ kernel = "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.u
 kernelcache_sha256 = "f18b4df865405f2a287b84977d7aca745e056d656d9fc9df1662970ce2969de7"
 slide = "-0x1000000"
 early_security_init = "com.apple.driver.AppleMobileFileIntegrity=0xfffffff005ab4ae0"
-roots = ["com.apple.driver.AppleMobileFileIntegrity", "com.apple.security.sandbox"]
+roots = ["com.apple.driver.AppleMobileFileIntegrity", "com.apple.security.sandbox", "com.apple.driver.ApplePMGR"]
 
 # Same iPad7,1 donor as umi (kernelcache hash pinned identically; XNU runs from source).
 [ipsw]
@@ -97,7 +97,7 @@ dram_size = "0x2f9900000"
 # Entry probe: the kernel paints stage bars at entry so the screen shows how far early boot gets.
 panic_screen = false  # the probe is applied + sealed manually before the payload step
 timeout = -1
-kernel_args = ["-v", "keepsyms=1", "kt_fixed_zones=120"]
+kernel_args = ["-v", "keepsyms=1", "kt_fixed_zones=120", "lemonades-pmgr=2"]
 
 [payload.adt]
 tool = "scripts/make-lemonades-adt.py"
