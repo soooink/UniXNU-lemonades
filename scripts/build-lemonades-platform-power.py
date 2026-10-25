@@ -167,8 +167,16 @@ sdk = run(['xcrun', '--sdk', 'iphoneos', '--show-sdk-path'], text=True).strip()
 run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-isysroot', sdk, '-c', asm, '-o', OUT / 'original-bindings.o'])
 late = OUT / 'LemonadesPlatformPower.late.o'
 objcopy = shutil.which('llvm-objcopy') or '/opt/homebrew/opt/llvm/bin/llvm-objcopy'
+# The static-initializer symbol name varies across clang versions (Xcode 26
+# may differ from the umi-era one); globalize whichever __GLOBAL__sub_I_ the
+# object actually carries.
+nm = shutil.which('llvm-nm') or '/opt/homebrew/opt/llvm/bin/llvm-nm'
+symtab = run([nm, obj], text=True)
+ctor = sorted({line.split()[2].strip() for line in symtab.splitlines()
+               if len(line.split()) >= 3 and line.split()[2].startswith('__GLOBAL__sub_I_')})
+require(len(ctor) == 1, f'Expected exactly one static initializer, got {ctor}')
 run([objcopy, '--remove-section=__DATA,__mod_init_func',
-     '--globalize-symbol=__GLOBAL__sub_I_UmiPlatformPower.cpp', obj, late])
+     f'--globalize-symbol={ctor[0]}', obj, late])
 
 
 def text_section(blob):
