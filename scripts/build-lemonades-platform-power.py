@@ -22,7 +22,14 @@ from native_prelink import macho, backed_offset, exports
 
 
 def run(command, **kwargs):
-    return subprocess.check_output([str(v) for v in command], timeout=90, **kwargs)
+    result = subprocess.run([str(v) for v in command], timeout=300,
+                            capture_output=True, text=True)
+    if result.returncode:
+        # Surface the compiler diagnostics instead of swallowing them.
+        print(result.stdout[-4000:], end='')
+        print(result.stderr[-4000:], file=sys.stderr, end='')
+        raise SystemExit(result.returncode)
+    return result.stdout
 
 
 def require(value, message):
