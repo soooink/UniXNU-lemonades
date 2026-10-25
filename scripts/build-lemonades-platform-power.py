@@ -61,7 +61,11 @@ for i in range(177, 340):
 header += '};\nstatic_assert(sizeof(ApplePMGR)==0x4b8a8,"Original provider storage");\n'
 (OUT / 'OriginalPMGRABI.h').write_text(header)
 (OUT / 'GuardedPMGRSlots.inc').write_text(guards)
-source = ROOT / 'kits/lemonades/LemonadesPlatformPower.cpp'
+# Compile under the original umi translation-unit name: the source aliases
+# umi_pmgr_static_init to __GLOBAL__sub_I_UmiPlatformPower.cpp, which only
+# matches the compiler-generated initializer when the file name matches.
+source = OUT / 'UmiPlatformPower.cpp'
+shutil.copyfile(ROOT / 'kits/lemonades/LemonadesPlatformPower.cpp', source)
 obj = OUT / 'LemonadesPlatformPower.o'
 record_dir = ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/iokit/DEVELOPMENT'
 record = json.loads((record_dir / 'IOPlatformExpert.cpo.json').read_text().strip().rstrip(','))
@@ -167,19 +171,13 @@ ctor = sorted({line.split()[2].strip() for line in symtab.splitlines()
                if len(line.split()) >= 3 and line.split()[2].startswith('__GLOBAL__sub_I_')})
 require(len(ctor) == 1, f'Expected exactly one static initializer, got {ctor}')
 asm = OUT / 'original-bindings.S'
-asm.write_text(''.join(f'.globl {name}\n.set {name}, {va:#x}\n' for name, va in bindings.items())
-               # Xcode 26 objects reference the static initializer without a
-               # definition surviving objcopy; kernel kext startup never runs
-               # C++ static initializers anyway.
-               + f'.globl {ctor[0]}\n{ctor[0]}:\n  ret\n')
+asm.write_text(''.join(f'.globl {name}\n.set {name}, {va:#x}\n' for name, va in bindings.items()))
 sdk = run(['xcrun', '--sdk', 'iphoneos', '--show-sdk-path'], text=True).strip()
 run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-isysroot', sdk, '-c', asm, '-o', OUT / 'original-bindings.o'])
 late = OUT / 'LemonadesPlatformPower.late.o'
 objcopy = shutil.which('llvm-objcopy') or '/opt/homebrew/opt/llvm/bin/llvm-objcopy'
-# Xcode 26 objects lose the initializer definition through objcopy and
-# llvm-objcopy cannot globalize it anyway; the reference is satisfied by the
-# no-op definition in the bindings assembly. Only drop the init section.
-run([objcopy, '--remove-section=__DATA,__mod_init_func', obj, late])
+run([objcopy, '--remove-section=__DATA,__mod_init_func',
+     f'--globalize-symbol={ctor[0]}', obj, late])
 (OUT / 'late-symbols.txt').write_text(run([nm, late], text=True))
 
 
