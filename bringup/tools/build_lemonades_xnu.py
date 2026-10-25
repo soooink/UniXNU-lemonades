@@ -273,10 +273,14 @@ def main():
     if args.stage in ("all", "bootstrap"):
         # This pass supplies compile records and symbol tables for the real providers.
         # It is not a runnable kernel and is never packaged as a payload.
+        # The umi flow reuses an earlier bootstrap for owner-root builds; a
+        # fresh all-in-one run must zero the storage flags too, or the
+        # baseline's NativeAES prelinked-closure assertion fires on this pass.
         run("bootstrap", build, {k: "0" for k in (
             "XNU_SOURCE_CORECRYPTO14", "XNU_SOURCE_PTHREAD", "XNU_ARM_DT_PLATFORM",
             "XNU_ARMCPU", "XNU_NATIVE_ARCH_TIMER", "XNU_BOOT_PROGRESS",
-            "LEMONADES_PMGR")})
+            "LEMONADES_PMGR", "XNU_NATIVE_AES", "XNU_NATIVE_VIRTIO_BLOCK",
+            "XNU_VERIFIED_ROOT_PROBE")})
     if args.stage in ("all", "libraries"):
         run("corecrypto-plain", ["python3", "scripts/build-corecrypto-14.py"])
         run("corecrypto-namespace", ["python3", "scripts/build-corecrypto-14.py", "--namespace"])
