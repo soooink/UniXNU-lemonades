@@ -55,23 +55,34 @@ python3 "$DEV/bringup/tools/verify_lemonades_storage_bindings.py" \
 # Entry probe: stage bars + panic screen, no reset probe.
 python3 "$DEV/scripts/patch-xnu-entry-probe.py" "$OUT/kernel.macho" --panic-screen --no-reset
 
-# Payload (ADT + FAT volume) and the boot image. To exercise the native UFS
-# root path on hardware, add to the payload argv line below:
-#   '--kernel-arg','native-ufs-root=1',
+# Payload (ADT + FAT volume) and the boot images. Two deliverables:
+#   boot-storage.img           control: no UFS boot args
+#   boot-storage-ufs-diag.img  UFS probe: native-ufs-root=1 plus
+#                              native-ufs-diagnostics=1, so any UFS root
+#                              failure panics with the full diagnostic table.
 # (The cli module has no __main__ guard: import main() explicitly.)
-PAYLOAD_PY="
-import sys
-sys.argv=['unixnu','build','payload','--kernel','$OUT/kernel.macho','--unique-chip-id','0x9E3779B97F4A7C15']
-from unixnu.cli import main
-main()"
-PYTHONPATH="$U/scripts" python3 -c "$PAYLOAD_PY"
 # The stock three-DTB blob the 9R ABL accepts (kona v2.1 primary).
 DTC="$HOME/ROm/uefi-lemonades/Resources/DTBs/lemonades-full.dtb"
-BOOTIMG_PY="
+build_payload() {
+  local extra=""
+  for spec in "$@"; do extra="$extra '--kernel-arg','$spec',"; done
+  PYTHONPATH="$U/scripts" python3 -c "
 import sys
-sys.argv=['unixnu','bootimg','--ramdisk','out/lemonades/payload/payload.img','--dtb','$DTC','-o','out/lemonades/boot/boot-storage.img']
+sys.argv=['unixnu','build','payload','--kernel','$OUT/kernel.macho','--unique-chip-id','0x9E3779B97F4A7C15',$extra]
 from unixnu.cli import main
 main()"
-PYTHONPATH="$U/scripts" python3 -c "$BOOTIMG_PY"
+}
+bootimg_for() {
+  PYTHONPATH="$U/scripts" python3 -c "
+import sys
+sys.argv=['unixnu','bootimg','--ramdisk','out/lemonades/payload/payload.img','--dtb','$DTC','-o','out/lemonades/boot/$1']
+from unixnu.cli import main
+main()"
+}
+build_payload
+bootimg_for boot-storage.img
+build_payload native-ufs-root=1 native-ufs-diagnostics=1
+bootimg_for boot-storage-ufs-diag.img
 
-echo "FLASH: fastboot flash boot_b $U/out/lemonades/boot/boot-storage.img"
+echo "FLASH control  : fastboot flash boot_b $U/out/lemonades/boot/boot-storage.img"
+echo "FLASH ufs-diag : fastboot flash boot_b $U/out/lemonades/boot/boot-storage-ufs-diag.img"
