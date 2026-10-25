@@ -45,9 +45,11 @@ fetch = ["KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1,SystemTrustC
 # entry from the running phone (OrangeFox recovery has root adb):
 #   sgdisk -p /dev/block/sda   # userdata is sda24 in the stage-0 dump
 # then fill first_lba / last_lba here. lba_bytes is the UFS logical block size.
+# Measured on this handset 2026-10-25: /sys/block/sda/sda24 start=17883392,
+# size=476143320 (512-byte sectors) -> 4096-byte LBAs, inclusive.
 [userdata]
-first_lba = 0x0
-last_lba = 0x0
+first_lba = 0x222000
+last_lba = 0x3adff7a
 lba_bytes = 4096
 windows = [
   { name = "OS", component = "OS" },
