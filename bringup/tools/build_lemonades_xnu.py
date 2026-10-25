@@ -281,7 +281,10 @@ def main():
             "XNU_ARMCPU", "XNU_NATIVE_ARCH_TIMER", "XNU_BOOT_PROGRESS",
             "LEMONADES_PMGR", "XNU_NATIVE_AES", "XNU_NATIVE_VIRTIO_BLOCK",
             "XNU_VERIFIED_ROOT_PROBE", "XNU_OWNER_ROOT_AUDIT",
-            "XNU_OWNER_ROOT_TRUST", "XNU_TRUST_CACHE_RUNTIME")})
+            "XNU_OWNER_ROOT_TRUST", "XNU_TRUST_CACHE_RUNTIME",
+            "XNU_OWNER_CACHE_MOUNT", "XNU_OWNER_CACHE_STARTUP",
+            "XNU_OWNER_BOOT_MANIFEST", "XNU_OWNER_UNION_SYSTEMOS",
+            "XNU_NATIVE_CS_HASH_CACHE")})
     if args.stage in ("all", "libraries"):
         run("corecrypto-plain", ["python3", "scripts/build-corecrypto-14.py"])
         run("corecrypto-namespace", ["python3", "scripts/build-corecrypto-14.py", "--namespace"])
