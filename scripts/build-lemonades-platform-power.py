@@ -63,7 +63,8 @@ header += '};\nstatic_assert(sizeof(ApplePMGR)==0x4b8a8,"Original provider stora
 (OUT / 'GuardedPMGRSlots.inc').write_text(guards)
 source = ROOT / 'kits/lemonades/LemonadesPlatformPower.cpp'
 obj = OUT / 'LemonadesPlatformPower.o'
-record = json.loads((ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/iokit/DEVELOPMENT/IOPlatformExpert.cpo.json').read_text().strip().rstrip(','))
+record_dir = ROOT / 'build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/iokit/DEVELOPMENT'
+record = json.loads((record_dir / 'IOPlatformExpert.cpo.json').read_text().strip().rstrip(','))
 command, i = [], 0
 arguments = record['arguments']
 while i < len(arguments):
@@ -72,6 +73,15 @@ while i < len(arguments):
         command.append(source)
     elif arg == '-o':
         command += ['-o', obj]
+        i += 1
+    elif arg == '-include':
+        # The cpo record ran with cwd in the kernel object directory where
+        # meta_features.h is generated; this compile runs elsewhere, so make
+        # the forced include absolute.
+        included = Path(arguments[i + 1])
+        if not included.is_absolute():
+            included = record_dir / included
+        command += ['-include', included]
         i += 1
     elif arg == '-Xclang' and arguments[i + 1].startswith('-W'):
         i += 1
