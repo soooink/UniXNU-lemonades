@@ -161,6 +161,11 @@ require(undefined == set(bindings), 'All and only audited original base imports'
 bindings.update({'_umi_original_pmgr_nub_create': 0xfffffff004a22568,
                  '_umi_original_pmgr_nub_read': 0xfffffff004a24adc,
                  '_umi_original_pmgr_nub_write': 0xfffffff004a230ec})
+nm = shutil.which('llvm-nm') or '/opt/homebrew/opt/llvm/bin/llvm-nm'
+symtab = run([nm, obj], text=True)
+ctor = sorted({line.split()[2].strip() for line in symtab.splitlines()
+               if len(line.split()) >= 3 and line.split()[2].startswith('__GLOBAL__sub_I_')})
+require(len(ctor) == 1, f'Expected exactly one static initializer, got {ctor}')
 asm = OUT / 'original-bindings.S'
 asm.write_text(''.join(f'.globl {name}\n.set {name}, {va:#x}\n' for name, va in bindings.items())
                # Xcode 26 objects reference the static initializer without a
@@ -171,14 +176,6 @@ sdk = run(['xcrun', '--sdk', 'iphoneos', '--show-sdk-path'], text=True).strip()
 run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-isysroot', sdk, '-c', asm, '-o', OUT / 'original-bindings.o'])
 late = OUT / 'LemonadesPlatformPower.late.o'
 objcopy = shutil.which('llvm-objcopy') or '/opt/homebrew/opt/llvm/bin/llvm-objcopy'
-# The static-initializer symbol name varies across clang versions (Xcode 26
-# may differ from the umi-era one); globalize whichever __GLOBAL__sub_I_ the
-# object actually carries.
-nm = shutil.which('llvm-nm') or '/opt/homebrew/opt/llvm/bin/llvm-nm'
-symtab = run([nm, obj], text=True)
-ctor = sorted({line.split()[2].strip() for line in symtab.splitlines()
-               if len(line.split()) >= 3 and line.split()[2].startswith('__GLOBAL__sub_I_')})
-require(len(ctor) == 1, f'Expected exactly one static initializer, got {ctor}')
 run([objcopy, '--remove-section=__DATA,__mod_init_func',
      f'--globalize-symbol={ctor[0]}', obj, late])
 late_syms = run([nm, late], text=True)
