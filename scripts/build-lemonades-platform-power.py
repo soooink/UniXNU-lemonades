@@ -162,7 +162,11 @@ bindings.update({'_umi_original_pmgr_nub_create': 0xfffffff004a22568,
                  '_umi_original_pmgr_nub_read': 0xfffffff004a24adc,
                  '_umi_original_pmgr_nub_write': 0xfffffff004a230ec})
 asm = OUT / 'original-bindings.S'
-asm.write_text(''.join(f'.globl {name}\n.set {name}, {va:#x}\n' for name, va in bindings.items()))
+asm.write_text(''.join(f'.globl {name}\n.set {name}, {va:#x}\n' for name, va in bindings.items())
+               # Xcode 26 objects reference the static initializer without a
+               # definition surviving objcopy; kernel kext startup never runs
+               # C++ static initializers anyway.
+               + f'.globl {ctor[0]}\n{ctor[0]}:\n  ret\n')
 sdk = run(['xcrun', '--sdk', 'iphoneos', '--show-sdk-path'], text=True).strip()
 run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-isysroot', sdk, '-c', asm, '-o', OUT / 'original-bindings.o'])
 late = OUT / 'LemonadesPlatformPower.late.o'
