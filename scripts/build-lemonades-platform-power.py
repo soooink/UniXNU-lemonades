@@ -147,7 +147,12 @@ for slot, name in enumerate(entries):
         require('16UmiPlatformPower' in name, f'Own guard/lifecycle required at slot {slot}')
     elif slot in (320, 321):
         require('9ApplePMGR' in name, 'Only actual original AON implementations inherited')
-        bindings[name] = ptr(0xfffffff005ce26d8 + slot * 8)
+        if a.candidate is not None:
+            bindings[name] = ptr(0xfffffff005ce26d8 + slot * 8)
+        else:
+            # Deterministic donor layout (same slide): the original AON
+            # implementations read from our qualified prelinked kernel.
+            bindings[name] = {320: 0xfffffff004a20fbc, 321: 0xfffffff004a20fc4}[slot]
     else:
         require(native_names.get(name) == ptr(native_names['__ZTV6IOPMGR'] + 16 + slot * 8),
                 f'Native IOPMGR/IOService entry differs at {slot}')
