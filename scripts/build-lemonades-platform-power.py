@@ -113,7 +113,7 @@ symbols = []
 for i in range(count):
     ix, kind, _, _, address = struct.unpack_from('<IBBHQ', raw, at + i * 16)
     symbols.append((raw[strings + ix:raw.index(b'\0', strings + ix)].decode(), address, kind))
-vtable = next(va for name, va, _ in symbols if name == '__ZTV16LemonadesPlatformPower')
+vtable = next(va for name, va, _ in symbols if name == '__ZTV16UmiPlatformPower')
 relocations = {}
 for segment in info['segments']:
     for section in segment['sections']:
@@ -140,7 +140,7 @@ bindings = {'__ZN9ApplePMGRC2EPK11OSMetaClass': 0xfffffff0049f003c,
             '__ZN9ApplePMGR10gMetaClassE': 0xfffffff006adf490}
 for slot, name in enumerate(entries):
     if slot in (0, 1, 7) or 168 <= slot < 340 and slot not in (320, 321):
-        require('16LemonadesPlatformPower' in name, f'Own guard/lifecycle required at slot {slot}')
+        require('16UmiPlatformPower' in name, f'Own guard/lifecycle required at slot {slot}')
     elif slot in (320, 321):
         require('9ApplePMGR' in name, 'Only actual original AON implementations inherited')
         bindings[name] = ptr(0xfffffff005ce26d8 + slot * 8)
@@ -159,7 +159,7 @@ run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-isysroot', sdk, '-c',
 late = OUT / 'LemonadesPlatformPower.late.o'
 objcopy = shutil.which('llvm-objcopy') or '/opt/homebrew/opt/llvm/bin/llvm-objcopy'
 run([objcopy, '--remove-section=__DATA,__mod_init_func',
-     '--globalize-symbol=__GLOBAL__sub_I_LemonadesPlatformPower.cpp', obj, late])
+     '--globalize-symbol=__GLOBAL__sub_I_UmiPlatformPower.cpp', obj, late])
 
 
 def text_section(blob):
