@@ -48,7 +48,7 @@ def main():
         assert line in header; header=header.replace(line,"")
     header=header.replace('#include "GccUfs.h"','#include <IOKit/IODeviceTreeSupport.h>')
     header=header.replace('#include "SmmuTakeover.h"','#include "LemonadesSmmuTakeover.h"')
-    header+='extern "C" void lemonades_native_ufs_checkpoint(void);\n'
+    header+='extern "C" void umi_native_ufs_checkpoint(void);\n'
     header+='extern "C" unsigned long gPhysBase, gPhysSize;\n'
     probe=(ROOT/"devices/lemonades/package/LemonadesUfsProbe.cpp").read_text()
     helpers=probe[probe.index("static uint32_t umi_mmio_upper_seen;"):probe.index('#include "UmiUfsRead.inc"')]
@@ -71,9 +71,9 @@ static void write32(uintptr_t base,unsigned offset,uint32_t value)
     layout="namespace {\n"+layout
     block=source[source.index("// One read-only window"):source.index("// Memory snapshot (native-ufs-probe=13)")]
     block=block.replace("  native_ufs_root_failure = reason;",
-                        "  native_ufs_root_failure = reason;\n  lemonades_native_ufs_checkpoint();")
+                        "  native_ufs_root_failure = reason;\n  umi_native_ufs_checkpoint();")
     block=block.replace("  gPendingProvider->release ();",
-                        "  lemonades_native_ufs_checkpoint();\n  gPendingProvider->release ();")
+                        "  umi_native_ufs_checkpoint();\n  gPendingProvider->release ();")
     block+='#include "LemonadesNativeUfsTrace.inc"\n'
     start=r'''
 bool NativeUfs::start(IOService *provider)
@@ -83,9 +83,9 @@ bool NativeUfs::start(IOService *provider)
   PE_parse_boot_argn("native-ufs-diagnostics",&diagnostic,sizeof(diagnostic));
   native_ufs_probe_requested=rootMode;
   if (rootMode!=1 || !OSDynamicCast(IOPlatformExpertDevice,provider)) return false;
-  if (!LEMONADES_UFS_PHONE) {
+  if (!UMI_UFS_PHONE) {
     IOLog("NativeUfs: QEMU hardware access skipped\n");
-    lemonades_native_ufs_checkpoint();
+    umi_native_ufs_checkpoint();
     return false;
   }
   gRootDiagnosticEnabled=diagnostic==1;
@@ -97,7 +97,7 @@ bool NativeUfs::start(IOService *provider)
     # Use the GPT/root geometry already validated by findRootLayout.
     for step in (1,2,3):
         needle=f"  native_ufs_root_step = {step};\n"
-        root=root.replace(needle,needle+"  lemonades_native_ufs_checkpoint();\n")
+        root=root.replace(needle,needle+"  umi_native_ufs_checkpoint();\n")
     needle="  native_ufs_root_step = 3;\n"
     root=root.replace(needle,needle+'''  if (layout->userdataFirst!=0x2c0000 || layout->userdataLast!=0x3b51ffa) {
     rootDiagnosticFailure("userdata differs from lemonades baseline");
