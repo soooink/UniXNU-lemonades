@@ -95,7 +95,7 @@ title = "OnePlus 9R - XNU bring-up"
 # 0xc0000000+0x140000000, 0x200000000+0x180000000) - identical to the umi map.
 dram_size = "0x2f9900000"
 # Entry probe: the kernel paints stage bars at entry so the screen shows how far early boot gets.
-panic_screen = true
+panic_screen = false  # the probe is applied + sealed manually before the payload step
 timeout = -1
 kernel_args = ["-v", "keepsyms=1", "kt_fixed_zones=120"]
 
