@@ -172,6 +172,9 @@ bool NativeUfs::start(IOService *provider)
         subprocess.run([sys.executable,str(script),"--directory",str(OUT)],check=True)
     else:
         print('storage binding skipped; base symbols resolve at the kernel link')
+        archive=OUT/"libNativeUfs.a"
+        archive.unlink(missing_ok=True)
+        subprocess.run(["xcrun","ar","rcs",str(archive),str(OUT/"NativeUfs.o")],check=True)
     report={"profile":args.profile,"disk_write_path":True,"verified_block_policies":True,
         "data_store_source_sha256":sha(store_source),"data_store_generated_sha256":sha(OUT/"LemonadesUfsStore.inc"),
         "commands_sha256":sha(OUT/"RootCommands.h"),
