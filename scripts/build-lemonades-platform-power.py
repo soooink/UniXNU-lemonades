@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'build/lemonades-platform-power'
 OUT.mkdir(parents=True, exist_ok=True)
 p = argparse.ArgumentParser(description=__doc__)
-p.add_argument('--candidate', type=Path, required=True)
+p.add_argument('--candidate', type=Path)  # optional: absent on a fresh workspace (audit skipped)
 p.add_argument('--donor', type=Path, required=True)
 a = p.parse_args()
 sys.path.insert(0, str(ROOT / 'kits/NativePrelink'))
@@ -30,7 +30,10 @@ def require(value, message):
         raise SystemExit(message)
 
 
-print(run(['python3', ROOT / 'scripts/audit-lemonades-pmgr-contract.py', '--candidate', a.candidate, '--donor', a.donor, '--output', OUT / 'contract.json'], text=True), end='')
+if a.candidate and a.candidate.is_file():
+    print(run(['python3', ROOT / 'scripts/audit-lemonades-pmgr-contract.py', '--candidate', a.candidate, '--donor', a.donor, '--output', OUT / 'contract.json'], text=True), end='')
+else:
+    print('audit skipped: no candidate kernel yet')
 header = '''// Generated exact storage/slot ABI; private fields stay opaque.
 #pragma once
 #include <IOKit/IOPMGR.h>
