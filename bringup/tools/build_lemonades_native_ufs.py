@@ -194,6 +194,7 @@ bool NativeUfs::start(IOService *provider)
         sdk=subprocess.check_output(["xcrun","--sdk","iphoneos","--show-sdk-path"],text=True).strip()
         result=subprocess.run(["xcrun","clang","-x","c++","-target","arm64-apple-ios17.0","-isysroot",sdk,
                         "-I",str(abi),"-I",str(UP/"kits/VerifiedRoot/include"),"-I",str(OUT),
+                        "-Wno-error",
                         "-c",str(stub),"-o",str(OUT/"owner-root-stub.o")],capture_output=True,text=True)
         if result.returncode:
             print(result.stdout[-2000:],end=''); print(result.stderr[-2000:],file=sys.stderr,end='')
