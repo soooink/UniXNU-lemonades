@@ -5,7 +5,7 @@
 #include <libkern/crypto/sha2.h>
 #include <kern/clock.h>
 #include <vm/vm_kern.h>
-#include "LemonadesSmmuTakeover.h"
+#include "UmiSmmuTakeover.h"
 #include "RootDiagnostics.h"
 #include "TransferPoll.h"
 static UfsRootDiagnostics gRootDiagnostic;
@@ -17,50 +17,50 @@ static void write32(uintptr_t base,unsigned offset,uint32_t value)
 }
 // Generated from the pinned NativeUfs.cpp production section. RootCommands
 // is cut at its explicit Persistent store boundary; no write API is compiled.
-#include "LemonadesUfsTransport.inc"
+#include "UmiUfsTransport.inc"
 #include "RootLayout.h"
 
 extern "C" {
-volatile uint64_t lemonades_ufs_smmu[32];
-volatile uint64_t lemonades_ufs_read[32];
+volatile uint64_t umi_ufs_smmu[32];
+volatile uint64_t umi_ufs_read[32];
 }
-static LemonadesSmmuPlan lemonadesPlan;
-static unsigned lemonadesReadPhase,lemonadesReadStatus;
+static UmiSmmuPlan umiPlan;
+static unsigned umiReadPhase,umiReadStatus;
 
-static void lemonadesReadSnapshot()
+static void umiReadSnapshot()
 {
-  auto &s=lemonades_ufs_smmu;
-  s[0]=2; s[1]=lemonadesReadPhase; s[2]=lemonadesReadStatus; s[3]=1;
+  auto &s=umi_ufs_smmu;
+  s[0]=2; s[1]=umiReadPhase; s[2]=umiReadStatus; s[3]=1;
   s[4]=gHost.phys; s[5]=gRootDiagnostic.contiguous;
   if(gHost.smmu) {
     s[6]=read32(gHost.smmu,0x20); s[7]=read32(gHost.smmu,0x24);
     s[8]=read32(gHost.smmu,0x28); s[9]=read32(gHost.smmu,0);
-    s[10]=lemonadesPlan.bank; s[11]=lemonadesPlan.pages;
+    s[10]=umiPlan.bank; s[11]=umiPlan.pages;
     for(unsigned i=0;i<2;++i) {
-      s[12+3*i]=lemonadesPlan.slot[i];
-      if(lemonadesPlan.slot[i]<128) {
-        s[13+3*i]=read32(gHost.smmu,0x800+4*lemonadesPlan.slot[i]);
-        s[14+3*i]=read32(gHost.smmu,0xc00+4*lemonadesPlan.slot[i]);
+      s[12+3*i]=umiPlan.slot[i];
+      if(umiPlan.slot[i]<128) {
+        s[13+3*i]=read32(gHost.smmu,0x800+4*umiPlan.slot[i]);
+        s[14+3*i]=read32(gHost.smmu,0xc00+4*umiPlan.slot[i]);
       }
     }
-    if(lemonadesPlan.pages && lemonadesPlan.bank<128 &&
-       (lemonadesPlan.pages+lemonadesPlan.bank+1)*4096<=0xd0000) {
-      s[18]=read32(gHost.smmu,0x1000+4*lemonadesPlan.bank);
-      s[19]=read32(gHost.smmu,0x1800+4*lemonadesPlan.bank);
-      s[20]=read32(gHost.smmu,(lemonadesPlan.pages+lemonadesPlan.bank)*4096);
-      s[21]=read32(gHost.smmu,(lemonadesPlan.pages+lemonadesPlan.bank)*4096+0x58);
+    if(umiPlan.pages && umiPlan.bank<128 &&
+       (umiPlan.pages+umiPlan.bank+1)*4096<=0xd0000) {
+      s[18]=read32(gHost.smmu,0x1000+4*umiPlan.bank);
+      s[19]=read32(gHost.smmu,0x1800+4*umiPlan.bank);
+      s[20]=read32(gHost.smmu,(umiPlan.pages+umiPlan.bank)*4096);
+      s[21]=read32(gHost.smmu,(umiPlan.pages+umiPlan.bank)*4096+0x58);
     }
     s[22]=read32(gHost.smmu,0x48);
   }
-  s[23]=lemonadesPlan.error;
+  s[23]=umiPlan.error;
   if(gHost.hc) {
     s[24]=read32(gHost.hc,0x60); s[25]=read32(gHost.hc,0x34);
     s[26]=read32(gHost.hc,0x58); s[27]=read32(gHost.hc,0x78);
   }
-  s[28]=lemonades_mmio_upper_seen;
+  s[28]=umi_mmio_upper_seen;
   s[29]=gRootDiagnostic.far; s[30]=gRootDiagnostic.fsyn; s[31]=gRootDiagnostic.gsyn;
-  auto &r=lemonades_ufs_read;
-  r[0]=3; r[1]=lemonadesReadPhase; r[2]=lemonadesReadStatus; r[3]=gRootDiagnostic.command;
+  auto &r=umi_ufs_read;
+  r[0]=3; r[1]=umiReadPhase; r[2]=umiReadStatus; r[3]=gRootDiagnostic.command;
   r[4]=gRootDiagnostic.type; r[5]=gRootDiagnostic.opcode; r[6]=gRootDiagnostic.lun;
   r[7]=gRootDiagnostic.ocs; r[8]=gRootDiagnostic.scsi; r[9]=gRootDiagnostic.response;
   r[10]=gRootDiagnostic.protocol; r[11]=gRootDiagnostic.residual; r[12]=gRootDiagnostic.sense;
@@ -72,64 +72,64 @@ static void lemonadesReadSnapshot()
   r[25]=gRootDiagnostic.manifest; r[26]=gRootDiagnostic.magic0; r[27]=gRootDiagnostic.magic1;
   r[28]=gRootDiagnostic.windows;
   __asm__ volatile("isb\n\tmrs %0,cntpct_el0":"=r"(r[31]));
-  lemonades_ufs_emit(s); lemonades_ufs_emit(r);
+  umi_ufs_emit(s); umi_ufs_emit(r);
 }
-static bool lemonadesReadStep(unsigned phase,IOReturn status,const char *why)
+static bool umiReadStep(unsigned phase,IOReturn status,const char *why)
 {
-  lemonadesReadPhase=phase; lemonadesReadStatus=uint32_t(status);
-  lemonadesReadSnapshot();
+  umiReadPhase=phase; umiReadStatus=uint32_t(status);
+  umiReadSnapshot();
   if(status!=kIOReturnSuccess)
     IOLog("UMI UFS phase=%u refused: %s status=%x SMMU=%u\n",
-          phase,why,uint32_t(status),lemonadesPlan.error);
+          phase,why,uint32_t(status),umiPlan.error);
   return status==kIOReturnSuccess;
 }
-static void lemonadesReadDisk()
+static void umiReadDisk()
 {
   // Keep descriptors allocated for the entire boot, especially on timeout:
   // the controller may still own them. No old firmware queue RAM is reused.
   gHost.hc=map(0x1d84000,0x3000,gHost.hcMap);
-  if(!lemonadesReadStep(6,gHost.hc?kIOReturnSuccess:kIOReturnNoMemory,"HC mapping")) return;
+  if(!umiReadStep(6,gHost.hc?kIOReturnSuccess:kIOReturnNoMemory,"HC mapping")) return;
   gHost.dma=IOBufferMemoryDescriptor::inTaskWithOptions(kernel_task,
     IOOptionBits(kIODirectionInOut)|IOOptionBits(kIOMemoryPhysicallyContiguous)|
     IOOptionBits(kIOMemoryMapperNone),kDmaBytes,4096);
   gHost.lock=IOLockAlloc();
-  if(!gHost.dma || !gHost.lock) { lemonadesReadStep(6,kIOReturnNoMemory,"DMA allocation"); return; }
+  if(!gHost.dma || !gHost.lock) { umiReadStep(6,kIOReturnNoMemory,"DMA allocation"); return; }
   gHost.virt=static_cast<uint8_t *>(gHost.dma->getBytesNoCopy());
   IOByteCount contiguous=0;
   gHost.phys=gHost.dma->getPhysicalSegment(0,&contiguous,kIOMemoryMapperNone);
   gRootDiagnostic.contiguous=contiguous;
   if(!gHost.virt || (gHost.phys&4095) || contiguous<kDmaBytes ||
      gHost.phys<0xc0000000ULL || gHost.phys>0xd0000000ULL-kDmaBytes) {
-    lemonadesReadStep(6,kIOReturnBadArgument,"DMA outside qualified 256 MiB"); return;
+    umiReadStep(6,kIOReturnBadArgument,"DMA outside qualified 256 MiB"); return;
   }
   gHost.smmu=map(0x15000000,0xd0000,gHost.smmuMap);
-  if(!gHost.smmu) { lemonadesReadStep(7,kIOReturnNoMemory,"SMMU mapping"); return; }
+  if(!gHost.smmu) { umiReadStep(7,kIOReturnNoMemory,"SMMU mapping"); return; }
   auto read=[&](unsigned at){return read32(gHost.smmu,at);};
-  lemonadesPlan=planLemonadesSmmu(gHost.phys,kDmaBytes,read);
-  if(!lemonadesReadStep(7,lemonadesPlan.error?kIOReturnNotReady:kIOReturnSuccess,"SMMU plan")) return;
+  umiPlan=planUmiSmmu(gHost.phys,kDmaBytes,read);
+  if(!umiReadStep(7,umiPlan.error?kIOReturnNotReady:kIOReturnSuccess,"SMMU plan")) return;
   const char *why="";
-  if(!hostStopQueue(&why)) { lemonadesReadStep(8,kIOReturnNotReady,why); return; }
+  if(!hostStopQueue(&why)) { umiReadStep(8,kIOReturnNotReady,why); return; }
   if(read32(gHost.hc,0x78) || read32(gHost.hc,0x80)) {
-    lemonadesReadStep(8,kIOReturnBusy,"task queue active"); return;
+    umiReadStep(8,kIOReturnBusy,"task queue active"); return;
   }
-  lemonadesReadStep(8,kIOReturnSuccess,"queue stopped");
+  umiReadStep(8,kIOReturnSuccess,"queue stopped");
   // Replan after quiescing, before any SMMU write.
-  lemonadesPlan=planLemonadesSmmu(gHost.phys,kDmaBytes,read);
-  lemonadesPlan.error=configureLemonadesSmmu(lemonadesPlan,read,
+  umiPlan=planUmiSmmu(gHost.phys,kDmaBytes,read);
+  umiPlan.error=configureUmiSmmu(umiPlan,read,
     [&](unsigned at,uint32_t value){write32(gHost.smmu,at,value);});
-  if(!lemonadesReadStep(9,lemonadesPlan.error?kIOReturnNotReady:kIOReturnSuccess,"SMMU readback")) return;
-  gHost.cb=gHost.smmu+(lemonadesPlan.pages+lemonadesPlan.bank)*4096;
+  if(!umiReadStep(9,umiPlan.error?kIOReturnNotReady:kIOReturnSuccess,"SMMU readback")) return;
+  gHost.cb=gHost.smmu+(umiPlan.pages+umiPlan.bank)*4096;
   bzero(gHost.virt,kDmaBytes);
   cacheCivac(gHost.virt,kDmaBytes);
-  if(!hostStartQueue(&why)) { lemonadesReadStep(10,kIOReturnNotReady,why); return; }
-  if(!lemonadesReadStep(10,hostNop(),"NOP OUT")) return;
+  if(!hostStartQueue(&why)) { umiReadStep(10,kIOReturnNotReady,why); return; }
+  if(!umiReadStep(10,hostNop(),"NOP OUT")) return;
   uint32_t power=0;
   IOReturn result=hostQueryRead(3,2,&power);
   gRootDiagnostic.power=power;
-  if(!lemonadesReadStep(11,result,"power query")) return;
+  if(!umiReadStep(11,result,"power query")) return;
   if((power&255)!=0x11) {
     uint8_t wake[6]={0x1b,0,0,0,0x10,0}; uint32_t scsi=0;
-    if(!lemonadesReadStep(11,hostScsi(0xd0,wake,6,false,0,500000,&scsi),"device wake")) return;
+    if(!umiReadStep(11,hostScsi(0xd0,wake,6,false,0,500000,&scsi),"device wake")) return;
     IOSleep(50);
   }
   for(unsigned attempt=0;attempt<20;++attempt) {
@@ -138,26 +138,26 @@ static void lemonadesReadDisk()
     if(result==kIOReturnSuccess || gHost.poisoned) break;
     IOSleep(10);
   }
-  if(!lemonadesReadStep(12,result,"LUN0 ready")) return;
+  if(!umiReadStep(12,result,"LUN0 ready")) return;
   uint8_t capacity[10]={0x25}; uint32_t scsi=0;
   result=hostScsi(0,capacity,10,true,8,200000,&scsi);
   if(result==kIOReturnSuccess) {
-    lemonades_ufs_read[29]=loadBe32(gHost.virt+kDataOffset);
-    lemonades_ufs_read[30]=loadBe32(gHost.virt+kDataOffset+4);
-    if(lemonades_ufs_read[30]!=4096 || lemonades_ufs_read[29]<0x3b51ffa ||
-       lemonades_ufs_read[29]==UINT32_MAX) result=kIOReturnBadMedia;
+    umi_ufs_read[29]=loadBe32(gHost.virt+kDataOffset);
+    umi_ufs_read[30]=loadBe32(gHost.virt+kDataOffset+4);
+    if(umi_ufs_read[30]!=4096 || umi_ufs_read[29]<0x3b51ffa ||
+       umi_ufs_read[29]==UINT32_MAX) result=kIOReturnBadMedia;
   }
-  if(!lemonadesReadStep(13,result,"LUN0 geometry")) return;
+  if(!umiReadStep(13,result,"LUN0 geometry")) return;
   gHost.ready=true;
   RootLayout layout;
-  if(!findRootLayout(&layout,&why)) { lemonadesReadStep(14,kIOReturnBadMedia,why); return; }
-  lemonades_ufs_read[23]=layout.gptHeaderCrc;
-  lemonades_ufs_read[24]=layout.gptEntriesCrc;
+  if(!findRootLayout(&layout,&why)) { umiReadStep(14,kIOReturnBadMedia,why); return; }
+  umi_ufs_read[23]=layout.gptHeaderCrc;
+  umi_ufs_read[24]=layout.gptEntriesCrc;
   // Cross-check the exact Android-collected partition bounds.
   if(layout.userdataFirst!=0x2c0000 || layout.userdataLast!=0x3b51ffa) {
-    lemonadesReadStep(14,kIOReturnBadMedia,"userdata differs from phone baseline"); return;
+    umiReadStep(14,kIOReturnBadMedia,"userdata differs from phone baseline"); return;
   }
-  lemonadesReadStep(15,kIOReturnSuccess,"GPT verified");
+  umiReadStep(15,kIOReturnSuccess,"GPT verified");
   IOLog("UMI UFS: real LUN0 read; GPT CRC valid; userdata=%llx..%llx manifest=%u windows=%u\n",
     layout.userdataFirst,layout.userdataLast,layout.manifestStatus,layout.windows);
 }

@@ -2,24 +2,24 @@
 // Adapted from UniXNU NativeUfs/SmmuTakeover.h: plan both SM8250 streams
 // together. Only the last, unused/disabled context may be used for bypass.
 #pragma once
-static inline bool lemonadesDmaInOwnedMemory(uint64_t address, uint64_t bytes, uint64_t base, uint64_t size)
+static inline bool umiDmaInOwnedMemory(uint64_t address, uint64_t bytes, uint64_t base, uint64_t size)
 {
   return bytes && size && size <= UINT64_MAX-base && address >= base &&
          bytes <= size && address-base <= size-bytes;
 }
 
-struct LemonadesSmmuPlan {
+struct UmiSmmuPlan {
   unsigned bank = 0, pages = 0, count = 0;
   unsigned slot[2] = {~0U, ~0U};
   bool reuse[2] = {};
   unsigned error = 0;
 };
-static constexpr uint16_t kLemonadesUfsStreams[2] = {0xe0, 0x4e0};
+static constexpr uint16_t kUmiUfsStreams[2] = {0xe0, 0x4e0};
 
 template<class Read>
-static LemonadesSmmuPlan planLemonadesSmmu(uint64_t dma, uint64_t bytes, Read read)
+static UmiSmmuPlan planUmiSmmu(uint64_t dma, uint64_t bytes, Read read)
 {
-  LemonadesSmmuPlan p;
+  UmiSmmuPlan p;
   uint32_t id0=read(0x20), id1=read(0x24), id2=read(0x28);
   p.count=id0&255;
   p.pages=1U<<(((id1>>28)&7)+1);
@@ -44,7 +44,7 @@ static LemonadesSmmuPlan planLemonadesSmmu(uint64_t dma, uint64_t bytes, Read re
     bool ownBank=((s2cr>>16)&3)==0 && (s2cr&255)==p.bank;
     bool owned=false;
     for(unsigned s=0;s<2;++s) {
-      if(((smr^kLemonadesUfsStreams[s])&0xffff&~mask)!=0) continue;
+      if(((smr^kUmiUfsStreams[s])&0xffff&~mask)!=0) continue;
       if(p.reuse[s] || mask || !ownBank) { p.error=3; return p; }
       p.reuse[s]=true; p.slot[s]=i; owned=true;
     }
@@ -65,7 +65,7 @@ static LemonadesSmmuPlan planLemonadesSmmu(uint64_t dma, uint64_t bytes, Read re
 // Queue must be stopped before calling. Every write must be ordered by the
 // caller. Refused writes stop immediately; no DMA may start on any failure.
 template<class Read,class Write>
-static unsigned configureLemonadesSmmu(const LemonadesSmmuPlan &p,Read read,Write write)
+static unsigned configureUmiSmmu(const UmiSmmuPlan &p,Read read,Write write)
 {
   if(p.error) return p.error;
   unsigned cb=(p.pages+p.bank)*4096;
@@ -73,7 +73,7 @@ static unsigned configureLemonadesSmmu(const LemonadesSmmuPlan &p,Read read,Writ
   // DMA range validation was performed by the planner on the actual allocation.
   for(unsigned s=0;s<2;++s) {
     uint32_t smr=read(0x800+4*p.slot[s]);
-    if(p.reuse[s] ? (smr!=(0x80000000U|kLemonadesUfsStreams[s]) ||
+    if(p.reuse[s] ? (smr!=(0x80000000U|kUmiUfsStreams[s]) ||
          read(0xc00+4*p.slot[s])!=p.bank) : (smr&0x80000000U)) return 7;
   }
   if(read(cb)&1) return 7;
@@ -89,8 +89,8 @@ static unsigned configureLemonadesSmmu(const LemonadesSmmuPlan &p,Read read,Writ
     if(read(0xc00+4*p.slot[s])!=p.bank) return 10;
   }
   for(unsigned s=0;s<2;++s) if(!p.reuse[s]) {
-    write(0x800+4*p.slot[s],0x80000000U|kLemonadesUfsStreams[s]);
-    if(read(0x800+4*p.slot[s])!=(0x80000000U|kLemonadesUfsStreams[s]) ||
+    write(0x800+4*p.slot[s],0x80000000U|kUmiUfsStreams[s]);
+    if(read(0x800+4*p.slot[s])!=(0x80000000U|kUmiUfsStreams[s]) ||
        read(0xc00+4*p.slot[s])!=p.bank) return 11;
   }
   return 0;

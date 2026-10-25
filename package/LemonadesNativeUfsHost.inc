@@ -5,8 +5,8 @@ static bool hostBringUp(const char **why)
 {
   if (gHost.poisoned) { *why="transport quarantined"; return false; }
   if (gHost.ready) return true;
-  if (!LEMONADES_UFS_PHONE) { *why="QEMU: no Qualcomm hardware"; return false; }
-  if (!isLemonades()) { *why="not the qualified lemonades"; return false; }
+  if (!UMI_UFS_PHONE) { *why="QEMU: no Qualcomm hardware"; return false; }
+  if (!isUmi()) { *why="not the qualified umi"; return false; }
   OSSharedPtr<IOMemoryMap> clocks;
   uintptr_t gcc=mapPhys(0x177000,4096,clocks);
   if (!gcc || !(read32(gcc,4)&0x80000000) ||
@@ -34,22 +34,22 @@ static bool hostBringUp(const char **why)
   // Check the actual XNU-owned allocation. The SMMU planner below separately
   // enforces the hardware's input/output address widths on the real DMA PA.
   if (!gHost.virt || (gHost.phys&4095) || contiguous<kDmaBytes ||
-      !lemonadesDmaInOwnedMemory(gHost.phys,kDmaBytes,gPhysBase,gPhysSize)) {
+      !umiDmaInOwnedMemory(gHost.phys,kDmaBytes,gPhysBase,gPhysSize)) {
     *why="DMA outside owned conventional RAM"; return false;
   }
   gRootDiagnostic.stage="SMMU mapping";
   gHost.smmu=mapPhys(0x15000000,0xd0000,gHost.smmuMap);
   if (!gHost.smmu) { *why="SMMU mapping"; return false; }
   auto read=[&](unsigned at){return read32(gHost.smmu,at);};
-  LemonadesSmmuPlan plan=planLemonadesSmmu(gHost.phys,kDmaBytes,read);
+  UmiSmmuPlan plan=planUmiSmmu(gHost.phys,kDmaBytes,read);
   if (plan.error) { *why="SMMU plan refused"; return false; }
   gRootDiagnostic.stage="stop old queue";
   if (!hostStopQueue(why)) return false;
   if (read32(gHost.hc,0x78) || read32(gHost.hc,0x80)) {
     *why="firmware task queue active"; return false;
   }
-  plan=planLemonadesSmmu(gHost.phys,kDmaBytes,read);
-  plan.error=configureLemonadesSmmu(plan,read,
+  plan=planUmiSmmu(gHost.phys,kDmaBytes,read);
+  plan.error=configureUmiSmmu(plan,read,
     [&](unsigned at,uint32_t value){write32(gHost.smmu,at,value);});
   if (plan.error) { *why="SMMU dual-stream readback"; return false; }
   gHost.cb=gHost.smmu+(plan.pages+plan.bank)*4096;
