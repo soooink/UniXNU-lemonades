@@ -151,24 +151,27 @@ bool NativeUfs::start(IOService *provider)
         # parameters) to errors; the umi-qualified source builds clean on the
         # umi-era toolchain.
         "-Wno-error"])
-    # The upstream relocation audit checks every slot of the compiled subclass.
-    binding=(UP/"scripts/build-native-virtio-bindings.py").read_text()
-    binding=binding.replace("ROOT = Path(__file__).resolve().parents[1]",f"ROOT = Path({str(UP)!r})")
-    binding=binding.replace("['NativeVirtioBlock', 'NativeRamBlock']","['NativeUfsBlock']")
-    binding=binding.replace("default='NativeVirtioBlock'","default='NativeUfsBlock'")
-    binding=binding.replace("ROOT / 'build/storage-abi/interface-audit.json'",repr(str(ROOT/"out/lemonades/storage-abi/interface-audit.json")))
-    binding=binding.replace("("+repr(str(ROOT/"out/lemonades/storage-abi/interface-audit.json"))+").read_text()",
-                            "Path("+repr(str(ROOT/"out/lemonades/storage-abi/interface-audit.json"))+").read_text()")
-    binding=binding.replace("out / (component + '.o')","out / 'NativeUfs.o'")
-    # Apple's c++filt otherwise strips the Mach-O underscore a second time.
-    binding=binding.replace("['xcrun', 'c++filt']","['xcrun', 'c++filt', '-n']")
-    binding=binding.replace("ROOT / 'build/native-prelink/native-apfs-load-positive.macho'",
-                            f"Path({str(ROOT/'out/lemonades-xnu/lemonades/kernel/qemu-storage-apfs.macho')!r})")
-    # Require the referenced qualification artifact, unlike the upstream's optional cache.
-    binding=binding.replace("if kernel_path.exists() and","if not kernel_path.exists() or")
-    binding=binding.replace("out / ('lib' + component + '.a')","out / 'libNativeUfs.a'")
-    script=OUT/"bind-storage.py"; script.write_text(binding)
-    subprocess.run([sys.executable,str(script),"--directory",str(OUT)],check=True)
+    if not __import__('os').environ.get('LEMONADES_SKIP_STORAGE_BINDING'):
+        # The upstream relocation audit checks every slot of the compiled subclass.
+        binding=(UP/"scripts/build-native-virtio-bindings.py").read_text()
+        binding=binding.replace("ROOT = Path(__file__).resolve().parents[1]",f"ROOT = Path({str(UP)!r})")
+        binding=binding.replace("['NativeVirtioBlock', 'NativeRamBlock']","['NativeUfsBlock']")
+        binding=binding.replace("default='NativeVirtioBlock'","default='NativeUfsBlock'")
+        binding=binding.replace("ROOT / 'build/storage-abi/interface-audit.json'",repr(str(ROOT/"out/lemonades/storage-abi/interface-audit.json")))
+        binding=binding.replace("("+repr(str(ROOT/"out/lemonades/storage-abi/interface-audit.json"))+").read_text()",
+                                "Path("+repr(str(ROOT/"out/lemonades/storage-abi/interface-audit.json"))+").read_text()")
+        binding=binding.replace("out / (component + '.o')","out / 'NativeUfs.o'")
+        # Apple's c++filt otherwise strips the Mach-O underscore a second time.
+        binding=binding.replace("['xcrun', 'c++filt']","['xcrun', 'c++filt', '-n']")
+        binding=binding.replace("ROOT / 'build/native-prelink/native-apfs-load-positive.macho'",
+                                f"Path({str(ROOT/'out/lemonades-xnu/lemonades/kernel/qemu-storage-apfs.macho')!r})")
+        # Require the referenced qualification artifact, unlike the upstream's optional cache.
+        binding=binding.replace("if kernel_path.exists() and","if not kernel_path.exists() or")
+        binding=binding.replace("out / ('lib' + component + '.a')","out / 'libNativeUfs.a'")
+        script=OUT/"bind-storage.py"; script.write_text(binding)
+        subprocess.run([sys.executable,str(script),"--directory",str(OUT)],check=True)
+    else:
+        print('storage binding skipped; base symbols resolve at the kernel link')
     report={"profile":args.profile,"disk_write_path":True,"verified_block_policies":True,
         "data_store_source_sha256":sha(store_source),"data_store_generated_sha256":sha(OUT/"LemonadesUfsStore.inc"),
         "commands_sha256":sha(OUT/"RootCommands.h"),
