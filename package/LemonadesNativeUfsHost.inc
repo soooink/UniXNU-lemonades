@@ -6,7 +6,7 @@ static bool hostBringUp(const char **why)
   if (gHost.poisoned) { *why="transport quarantined"; return false; }
   if (gHost.ready) return true;
   if (!UMI_UFS_PHONE) { *why="QEMU: no Qualcomm hardware"; return false; }
-  if (!isUmi()) { *why="not the qualified umi"; return false; }
+  if (!isUmi()) { *why="board model not qualified for UFS host access"; return false; }
   OSSharedPtr<IOMemoryMap> clocks;
   uintptr_t gcc=mapPhys(0x177000,4096,clocks);
   if (!gcc || !(read32(gcc,4)&0x80000000) ||

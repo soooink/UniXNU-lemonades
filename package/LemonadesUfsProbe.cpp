@@ -63,13 +63,19 @@ static uintptr_t map(uint64_t physical, uint64_t bytes, OSSharedPtr<IOMemoryMap>
 static bool isUmi(void)
 {
   // Product model retains the physical board identity when the root model
-  // selects an iPad userspace compatibility profile.
+  // selects an iPad userspace compatibility profile. Qualified SM8250 UFS
+  // host boards: the umi bring-up baseline and this device's model property
+  // (package/lemonades-hardware.json: "kona MTP 20828").
+  static const char expected[]="Qualcomm Technologies, Inc. xiaomi umi";
+  static const char lemonades[]="Qualcomm Technologies, Inc. kona MTP 20828";
   IORegistryEntry *root=IORegistryEntry::fromPath("/product",gIODTPlane);
   if (!root) return false;
   OSData *model=OSDynamicCast(OSData,root->getProperty("model"));
-  const char expected[]="Qualcomm Technologies, Inc. xiaomi umi";
-  bool matches=model && model->getLength()==sizeof(expected) &&
-    !memcmp(model->getBytesNoCopy(),expected,sizeof(expected));
+  bool matches=model &&
+    ((model->getLength()==sizeof(expected) &&
+      !memcmp(model->getBytesNoCopy(),expected,sizeof(expected))) ||
+     (model->getLength()==sizeof(lemonades) &&
+      !memcmp(model->getBytesNoCopy(),lemonades,sizeof(lemonades))));
   root->release();
   return matches;
 }
