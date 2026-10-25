@@ -146,7 +146,11 @@ bool NativeUfs::start(IOService *provider)
         "-I",str(TREE/".cache/xnu-work/osfmk"),
         "-I",str(UP/"kits/VerifiedRoot/include"),
         "-DNATIVE_VERIFIED_BLOCK=1","-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1",
-        "-DLEMONADES_UFS_PHONE="+str(int(args.profile=="phone"))])
+        "-DLEMONADES_UFS_PHONE="+str(int(args.profile=="phone")),
+        # Xcode 26 promotes IOStorageFamily macro-diagnostics (keyword macro
+        # parameters) to errors; the umi-qualified source builds clean on the
+        # umi-era toolchain.
+        "-Wno-error"])
     # The upstream relocation audit checks every slot of the compiled subclass.
     binding=(UP/"scripts/build-native-virtio-bindings.py").read_text()
     binding=binding.replace("ROOT = Path(__file__).resolve().parents[1]",f"ROOT = Path({str(UP)!r})")
