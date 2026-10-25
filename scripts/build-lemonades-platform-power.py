@@ -89,11 +89,17 @@ while i < len(arguments):
         command.append(arg)
     i += 1
 command += ['-Wall', '-Wextra', '-Werror', '-Wno-format',
+            '-Wno-unnecessary-virtual-specifier',
             # Xcode 26 makes the umi-era diagnostic format strings hard errors;
             # they print observation slots only.
-            '-Wall', '-Wextra', '-Werror', '-Wno-unused-parameter', '-Wno-c99-designator',
+            '-Wno-unused-parameter', '-Wno-c99-designator',
             '-Wno-reorder-init-list', '-Wno-deprecated-enum-enum-conversion',
-            '-I', OUT, '-I', ROOT / '.cache/xnu-work/osfmk']
+            # meta_features.h lives in the kernel object dir with angled
+            # includes of its own (config_dtrace.h, mach_assert.h, ...).
+            '-I', record_dir,
+            '-I', ROOT / '.cache/xnu-work/osfmk',
+            '-I', ROOT / 'build/xnu/ios-obj/EXPORT_HDRS/osfmk',
+            '-I', OUT]
 (OUT / 'compile-command.json').write_text(json.dumps([str(v) for v in command], indent=2) + '\n')
 run(command, cwd=record['directory'])
 raw = obj.read_bytes()
