@@ -4,7 +4,9 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
+import struct
 import subprocess
 import sys
 
@@ -173,7 +175,88 @@ bool NativeUfs::start(IOService *provider)
         script=OUT/"bind-storage.py"; script.write_text(binding)
         subprocess.run([sys.executable,str(script),"--directory",str(OUT)],check=True)
     else:
-        print('storage binding skipped; base symbols resolve at the kernel link')
+        # No QEMU qualification on this path. The base-class imports bind to
+        # the pinned addresses recovered from the hardware-proven prelinked
+        # kernel (bringup/storage-bindings.json: same donor kernelcache, same
+        # slide, same pinned emit_prelink, so the donor layout is identical
+        # for every profile). The freshly compiled public-source reference
+        # object proves the pinned record's dispatch identity slot by slot.
+        sys.path.insert(0, str(UP / "kits/NativePrelink"))
+        import native_prelink as np
+        reference = OUT / "IOBlockStorageDevice-reference.o"
+        # Annotation instrument only; never linked or executed, so warnings
+        # stay non-fatal on newer toolchains.
+        compile_from(record, fam / "IOBlockStorageDevice.cpp", reference, [
+            "-I", str(ROOT / "out/lemonades/storage-abi/include"),
+            "-I", str(TREE / ".cache/xnu-work/osfmk"),
+            "-Wno-deprecated-declarations", "-Wno-unnecessary-virtual-specifier",
+            "-Wno-error"])
+        blob = reference.read_bytes()
+        rimg = np.macho(blob)
+        roff = next(at for cmd, at, size in rimg['commands'] if cmd == 2)
+        rsy, rcount, rst, _ = struct.unpack_from('<4I', blob, roff + 8)
+        rsymbols = []
+        for i in range(rcount):
+            ix, kind, _, _, value = struct.unpack_from('<IBBHQ', blob, rsy + i * 16)
+            rsymbols.append((blob[rst + ix:blob.index(b'\0', rst + ix)].decode(), value, kind))
+        rvtable = next(v for name, v, kind in rsymbols if name == '__ZTV20IOBlockStorageDevice')
+        rloc = {}
+        for segment in rimg['segments']:
+            for section in segment['sections']:
+                if section['va'] <= rvtable < section['va'] + section['size']:
+                    rlo, rlc = struct.unpack_from('<II', blob, section['command_offset'] + 56)
+                    for i in range(rlc):
+                        address, word = struct.unpack_from('<II', blob, rlo + i * 8)
+                        if word >> 27 & 1 and word >> 28 == 0 and word >> 25 & 3 == 3:
+                            rloc[section['va'] + address] = rsymbols[word & 0xffffff][0]
+        methods = []
+        at = rvtable + 16
+        while at in rloc:
+            methods.append(rloc[at]); at += 8
+        if len(methods) != 190 or methods.count('___cxa_pure_virtual') != 14:
+            raise SystemExit('public IOBlockStorageDevice dispatch shape changed: %d slots' % len(methods))
+        pinned = json.loads((ROOT / "bringup/storage-bindings.json").read_text())
+        if pinned['donor_kernelcache_sha256'] != 'f18b4df865405f2a287b84977d7aca745e056d656d9fc9df1662970ce2969de7':
+            raise SystemExit('pinned storage record provenance mismatch')
+        for i, name in enumerate(methods):
+            expect = pinned['slot_names_from_merged_kernel_exports'][i]
+            if expect is None:
+                continue
+            if name != expect and not (isinstance(expect, list) and name in expect):
+                raise SystemExit(f'reference dispatch slot {i} disagrees with the pinned storage record')
+        nu = (OUT / "NativeUfs.o").read_bytes()
+        nimg = np.macho(nu)
+        noff = next(at for cmd, at, size in nimg['commands'] if cmd == 2)
+        nsy, ncount, nst, _ = struct.unpack_from('<4I', nu, noff + 8)
+        undefined = []
+        for i in range(ncount):
+            ix, kind, _, _, value = struct.unpack_from('<IBBHQ', nu, nsy + i * 16)
+            if kind == 1:
+                undefined.append(nu[nst + ix:nu.index(b'\0', nst + ix)].decode())
+        base = [n for n in undefined if 'IOBlockStorageDevice' in n]
+        special = {'__ZTV20IOBlockStorageDevice': int(pinned['vtable'], 16),
+                   '__ZN20IOBlockStorageDevice10gMetaClassE': int(pinned['original_metaclass'], 16),
+                   '__ZN20IOBlockStorageDeviceC2EPK11OSMetaClass': int(pinned['original_protected_constructor'], 16),
+                   '__ZN20IOBlockStorageDeviceD2Ev': int(pinned['original_base_destructor'], 16)}
+        bindings = {}
+        for name in base:
+            if re.search(r'IOBlockStorageDeviceD[01]Ev$', name):
+                raise SystemExit('concrete driver must not invoke abstract destruction: ' + name)
+            if name in special:
+                bindings[name] = special[name]; continue
+            if name not in methods:
+                raise SystemExit('unqualified original storage import: ' + name)
+            bindings[name] = int(pinned['slot_targets'][methods.index(name)], 16)
+        asm = OUT / "original-bindings.S"
+        asm.write_text(''.join(f'.globl {n}\n.set {n}, {v:#x}\n' for n, v in sorted(bindings.items())))
+        subprocess.run(["xcrun", "clang", "-target", "arm64-apple-ios17.0", "-c", str(asm),
+                        "-o", str(OUT / "original-bindings.o")], check=True)
+        (OUT / "bindings.json").write_text(json.dumps(dict(
+            mode='pinned static bindings (no QEMU audit)', donor=pinned['donor_kernelcache_sha256'],
+            slide=pinned['slide'], vtable=pinned['vtable'], methods_checked=190,
+            dispatch_slots_verified=sum(n is not None for n in pinned['slot_names_from_merged_kernel_exports']),
+            bindings={n: hex(v) for n, v in sorted(bindings.items())},
+            hardware_tested=False, actual_io_qualified=False), indent=2) + '\n')
         # Empty owner-root policy stub: vr_* always refuses and the policy
         # table is empty, so configureVerification() takes its "no policies"
         # path. vr_xnu_crypto stays null; nothing dereferences it then.
@@ -203,7 +286,8 @@ bool NativeUfs::start(IOService *provider)
             raise SystemExit(result.returncode)
         archive=OUT/"libNativeUfs.a"
         archive.unlink(missing_ok=True)
-        subprocess.run(["xcrun","ar","rcs",str(archive),str(OUT/"NativeUfs.o"),str(OUT/"owner-root-stub.o")],check=True)
+        subprocess.run(["xcrun","ar","rcs",str(archive),str(OUT/"NativeUfs.o"),
+                        str(OUT/"original-bindings.o"),str(OUT/"owner-root-stub.o")],check=True)
     report={"profile":args.profile,"disk_write_path":True,"verified_block_policies":True,
         "data_store_source_sha256":sha(store_source),"data_store_generated_sha256":sha(OUT/"LemonadesUfsStore.inc"),
         "commands_sha256":sha(OUT/"RootCommands.h"),
