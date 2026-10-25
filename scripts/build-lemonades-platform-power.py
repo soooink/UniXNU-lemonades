@@ -192,6 +192,9 @@ require(text_section(raw) == text_section(late.read_bytes()), 'Late registration
 archive = OUT / 'libLemonadesPlatformPower.a'
 archive.unlink(missing_ok=True)
 run(['xcrun', 'ar', 'rcs', archive, late, OUT / 'original-bindings.o'])
+# Bring-up: show exactly what the archive exports into the kernel link.
+archive_syms = run([nm, '--print-map' if False else '--defined-only', archive], text=True)
+print('archive symbols:', archive_syms[-1500:])
 report = {'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
           'archive_sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
           'bindings': {name: hex(va) for name, va in bindings.items()}, 'virtual_entries': 340,
