@@ -139,7 +139,10 @@ def compile_bundle(out):
     record = json.loads(rec.read_text().strip().rstrip(","))
     sources = [UP/"kits/VerifiedRoot/src/verified_root.c",
                UP/"kits/VerifiedRoot/adapters/xnu_crypto.c",
-               UP/"scripts/qemu-entry/verified-root-probe.c"]
+               UP/"scripts/qemu-entry/verified-root-probe.c",
+               # A1: answer the kernel's root-binding audit from the native UFS
+               # provider instead of the full NativeVirtioBlock chain.
+               ROOT/"devices/lemonades/package/LemonadesVerifiedBlockQuery.cpp"]
     objects = []
     for source in sources:
         obj = out/(source.stem + ".o")
