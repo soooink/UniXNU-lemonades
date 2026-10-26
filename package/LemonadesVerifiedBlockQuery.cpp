@@ -10,6 +10,7 @@
 // This replaces the full NativeVirtioBlock provider for devices whose only
 // verified transport is the native UFS driver.
 #include <IOKit/IOBSD.h>
+#include <IOKit/IOService.h>
 #include <IOKit/IOLib.h>
 #include <libkern/c++/OSDictionary.h>
 #include <libkern/c++/OSIterator.h>
