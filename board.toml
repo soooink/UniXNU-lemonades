@@ -106,6 +106,10 @@ kernel_args = ["-v", "keepsyms=1", "kt_fixed_zones=120", "umi-pmgr=2"]
 
 [payload.adt]
 tool = "scripts/make-lemonades-adt.py"
+# The kernel's root mount matches the OS volume by UUID (IOKitBSDInit's
+# /chosen/root-matching), which also waits for the native UFS window media
+# instead of racing the publisher thread.
+root_match_volume_uuid = "04769D26-2CA0-4825-B443-E2E5F88300F2"
 # Local IOPlatformUUID seed based on the observed qcom,msm-id (SoC 0x164 = SM8250).
 chip_id = "0x164"
 unique_chip_id = "required"
