@@ -151,7 +151,8 @@ def compile_bundle(out):
     for source in sources:
         obj = out/(source.stem + ".o")
         chosen = cpp_record if source.suffix == ".cpp" else record
-        compile_from(chosen, source, obj, ["-I", str(UP/"kits/VerifiedRoot/include")])
+        compile_from(chosen, source, obj, ["-I", str(UP/"kits/VerifiedRoot/include"),
+                                           "-Wno-unnecessary-virtual-specifier", "-Wno-error"])
         objects.append(obj)
     sdk = subprocess.check_output(["xcrun", "--sdk", "iphoneos", "--show-sdk-path"], text=True).strip()
     subprocess.run(["xcrun", "clang", "-target", "arm64-apple-ios17.0", "-isysroot", sdk,
