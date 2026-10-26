@@ -315,6 +315,14 @@ def main():
                               "--profile", args.profile]
                 + (["--verified-root"] if args.verified_root else []))
             if args.verified_root:
+                # The pinned recipe requires the virtio provider for owner-root
+                # trust; this profile substitutes the native UFS query.
+                recipe = ctx.tree / "scripts/build-xnu-4k-baseline.sh"
+                text = recipe.read_text()
+                gate = ('if [ "$OWNER_ROOT_TRUST" = 1 ] && { [ "$OWNER_ROOT_AUDIT" != 1 ] || '
+                        '[ "${XNU_NATIVE_VIRTIO_BLOCK:-0}" != 1 ]; }; then')
+                assert gate in text, "owner-root trust gate changed"
+                recipe.write_text(text.replace(gate, 'if [ "$OWNER_ROOT_TRUST" = 1 ] && [ "$OWNER_ROOT_AUDIT" != 1 ]; then'))
                 run("root-policy", [sys.executable, str(ROOT / "tools/build_lemonades_root_bundle.py"),
                                     "--external"])
             elif args.owner_root != "off":
