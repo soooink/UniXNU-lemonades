@@ -117,8 +117,8 @@ bool NativeUfs::start(IOService *provider)
     board_userdata=tomllib.loads(board_path.read_text())["userdata"]
     userdata_first=int(board_userdata["first_lba"]); userdata_last=int(board_userdata["last_lba"])
     root=root.replace(needle,needle+f'''  {{
-    const bool lemonadesUserdataMatch=(layout->userdataFirst=={userdata_first:x}ull && layout->userdataLast=={userdata_last:x}ull);
-    IOLog("NativeUfs: GPT userdata first=%#llx last=%#llx (board {userdata_first:x}..{userdata_last:x}) match=%d\\n",
+    const bool lemonadesUserdataMatch=(layout->userdataFirst==0x{userdata_first:x}ull && layout->userdataLast==0x{userdata_last:x}ull);
+    IOLog("NativeUfs: GPT userdata first=%#llx last=%#llx (board 0x{userdata_first:x}..0x{userdata_last:x}) match=%d\\n",
       (unsigned long long)layout->userdataFirst,(unsigned long long)layout->userdataLast,lemonadesUserdataMatch?1:0);
   }}
 ''')
