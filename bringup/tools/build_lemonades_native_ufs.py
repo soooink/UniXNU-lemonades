@@ -38,6 +38,8 @@ def compile_from(record,source,obj,extra):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile",choices=("qemu","phone"),required=True)
+    parser.add_argument("--verified-root", action="store_true",
+                        help="the VerifiedRoot bundle provides vr_*/policy symbols; skip the empty stub")
     args=parser.parse_args()
     OUT.mkdir(parents=True,exist_ok=True)
     source=(UP/"drivers/NativeUfs/NativeUfs.cpp").read_text()
@@ -348,9 +350,10 @@ static bool loadRootPolicies (const RootLayout *layout)
         # table is empty, so configureVerification() takes its "no policies"
         # path. vr_xnu_crypto stays null; nothing dereferences it then.
         stub=OUT/"owner-root-stub.c"
-        stub.write_text(
-          '#include <stddef.h>\n'
-          '#include <stdint.h>\n'
+        # When the VerifiedRoot bundle is linked (--verified-root) it already
+        # provides vr_*, the key and the policy table; the stub then keeps only
+        # the weak helper the kernel link wants.
+        stub_body=('' if args.verified_root else
           '#include "verified_root.h"\n'
           '#include "VerifiedBlockPolicy.h"\n'
           'extern const struct vr_crypto vr_xnu_crypto = { NULL, NULL };\n'
@@ -360,7 +363,11 @@ static bool loadRootPolicies (const RootLayout *layout)
           'int vr_open(const uint8_t *e, size_t n, const uint8_t k[395], uint64_t g,'
           ' const struct vr_crypto *c, struct vr_view *v) { (void)e;(void)n;(void)k;(void)g;(void)c;(void)v; return VR_KEY; }\n'
           'int vr_verify_block(const struct vr_view *v, uint64_t b, const void *p, size_t s,'
-          ' const struct vr_crypto *c) { (void)v;(void)b;(void)p;(void)s;(void)c; return VR_SIGNATURE; }\n'
+          ' const struct vr_crypto *c) { (void)v;(void)b;(void)p;(void)s;(void)c; return VR_SIGNATURE; }\n')
+        stub.write_text(
+          '#include <stddef.h>\n'
+          '#include <stdint.h>\n'
+          + stub_body +
           '// weak-declared in NativeUfs.cpp; Apple ld wants a definition in the final image\n'
           'extern "C" void boot_progress_poll(void) {}\n')
         sdk=subprocess.check_output(["xcrun","--sdk","iphoneos","--show-sdk-path"],text=True).strip()
