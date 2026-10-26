@@ -121,7 +121,7 @@ bool NativeUfs::start(IOService *provider)
     IOLog("NativeUfs: GPT userdata first=%#llx last=%#llx (board {userdata_first:x}..{userdata_last:x}) match=%d\\n",
       (unsigned long long)layout->userdataFirst,(unsigned long long)layout->userdataLast,lemonadesUserdataMatch?1:0);
   }}
-'''))
+''')
     generated=OUT/"NativeUfs.cpp"
     store_source=ROOT/"devices/lemonades/package/data-store/UfsStore.inc"
     store=store_source.read_text()
