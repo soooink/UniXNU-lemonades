@@ -327,6 +327,25 @@ def main():
                         '[ "${XNU_NATIVE_VIRTIO_BLOCK:-0}" != 1 ]; }; then')
                 assert gate in text, "owner-root trust gate changed"
                 recipe.write_text(text.replace(gate, 'if [ "$OWNER_ROOT_TRUST" = 1 ] && [ "$OWNER_ROOT_AUDIT" != 1 ]; then'))
+                # The audit's vfs_devvp/vnode_put pair is not needed: rootdev
+                # names the same mounted device and both calls take vnode
+                # locks in a preemptible bsd_init context. Trim them from the
+                # pinned patch.
+                audit = ctx.tree / "patches/xnu/offline-owner-root-binding-audit.patch"
+                text = audit.read_text()
+                for line in ("+\t\t\t\tvnode_t device_vnode = vfs_devvp(root_mount);\n",
+                             "+\t\t\t\tif (device_vnode) vnode_put(device_vnode);\n"):
+                    assert line in text, "audit patch line changed"
+                    text = text.replace(line, "")
+                for old_line, new_line in (
+                        ("+\t\t\t\tdev_t device = device_vnode ? vnode_specrdev(device_vnode) : NODEV;\n",
+                         "+\t\t\t\tdev_t device = rootdev;\n"),
+                        ("+\t\t\t\tint owner = readonly && device_vnode && native_verified_block_root_authorized(device);\n",
+                         "+\t\t\t\tint owner = readonly && native_verified_block_root_authorized(device);\n")):
+                    assert old_line in text, "audit patch line changed"
+                    text = text.replace(old_line, new_line)
+                assert "@@ -987,9 +987,41 @@" in text
+                audit.write_text(text.replace("@@ -987,9 +987,41 @@", "@@ -987,9 +987,39 @@"))
                 run("root-policy", [sys.executable, str(ROOT / "tools/build_lemonades_root_bundle.py"),
                                     "--external"])
             elif args.owner_root != "off":
