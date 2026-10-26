@@ -151,8 +151,12 @@ def main():
     settings["XNU_VERIFIED_ROOT_PROBE"] = str(int(args.native_ufs and (args.verified_root or args.owner_root != "off")))
     if args.native_ufs:
         settings["XNU_VERIFIED_ROOT_ARCHIVE"] = str(ctx.tree / "build/lemonades-root-policy/libVerifiedRootProbe.a")
-    settings["XNU_OWNER_ROOT_AUDIT"] = str(int(args.owner_root != "off"))
-    settings["XNU_OWNER_ROOT_TRUST"] = str(int(args.owner_root == "trust"))
+    # --verified-root accepts the mounted root from the owner-signed UFS
+    # window: the audit records the decision and trust lets it replace the
+    # missing Apple root seal. The native UFS provider answers the binding
+    # query, so the NativeVirtioBlock dependency is not needed.
+    settings["XNU_OWNER_ROOT_AUDIT"] = str(int(args.verified_root or args.owner_root != "off"))
+    settings["XNU_OWNER_ROOT_TRUST"] = str(int(args.verified_root or args.owner_root == "trust"))
     settings["XNU_TRUST_CACHE_RUNTIME"] = str(int(args.owner_root != "off"))
     settings["XNU_NATIVE_AES"] = settings["XNU_NATIVE_VIRTIO_BLOCK"] = str(int(args.owner_root != "off"))
     for option in ("OWNER_CACHE_MOUNT", "OWNER_CACHE_STARTUP", "OWNER_BOOT_MANIFEST",
