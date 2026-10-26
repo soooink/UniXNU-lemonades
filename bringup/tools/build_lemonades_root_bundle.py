@@ -143,10 +143,15 @@ def compile_bundle(out):
                # A1: answer the kernel's root-binding audit from the native UFS
                # provider instead of the full NativeVirtioBlock chain.
                ROOT/"devices/lemonades/package/LemonadesVerifiedBlockQuery.cpp"]
+    # The C sources follow the bsd_init record; the IOKit query is C++ and
+    # needs the iokit record the native driver builds use.
+    cpp_record_path = TREE/"build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/iokit/DEVELOPMENT/IOPlatformExpert.cpo.json"
+    cpp_record = json.loads(cpp_record_path.read_text().strip().rstrip(","))
     objects = []
     for source in sources:
         obj = out/(source.stem + ".o")
-        compile_from(record, source, obj, ["-I", str(UP/"kits/VerifiedRoot/include")])
+        chosen = cpp_record if source.suffix == ".cpp" else record
+        compile_from(chosen, source, obj, ["-I", str(UP/"kits/VerifiedRoot/include")])
         objects.append(obj)
     sdk = subprocess.check_output(["xcrun", "--sdk", "iphoneos", "--show-sdk-path"], text=True).strip()
     subprocess.run(["xcrun", "clang", "-target", "arm64-apple-ios17.0", "-isysroot", sdk,
