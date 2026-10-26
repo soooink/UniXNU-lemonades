@@ -22,6 +22,18 @@
 extern "C" int native_ufs_block_authenticates(IOService *, const char *, uint8_t *)
     __attribute__((weak));
 
+// Diagnostics recorded by bsd_init's owner-root audit. The AES fields stay 0:
+// this profile does not link the NativeAES driver.
+extern "C" {
+volatile uint32_t native_aes_kat_status = 0;
+volatile uint32_t native_aes_registered = 0;
+volatile uint32_t native_verified_block_root_device = 0;
+volatile uint32_t native_verified_block_root_media_matches = 0;
+volatile uint32_t native_verified_block_root_provider_depth = 0;
+volatile uint32_t native_verified_block_root_uuid_match = 0;
+volatile uint32_t native_verified_block_wrong_uuid_refused = 0;
+}
+
 extern "C" int
 native_verified_block_root_authorized(dev_t device)
 {
@@ -52,8 +64,9 @@ native_verified_block_root_authorized(dev_t device)
 	if (!iterator) {
 		return 0;
 	}
+	native_verified_block_root_device = static_cast<uint32_t>(device);
 	int authorized = 0;
-	unsigned matches = 0;
+	unsigned matches = 0, depth = 0;
 	while (OSObject *object = iterator->getNextObject()) {
 		IOService *media = OSDynamicCast(IOService, object);
 		if (!media) {
@@ -68,6 +81,7 @@ native_verified_block_root_authorized(dev_t device)
 			continue;
 		}
 		for (IOService *provider = media; provider; provider = provider->getProvider()) {
+			depth++;
 			int ufs = native_ufs_block_authenticates(provider, uuid->getCStringNoCopy(), nullptr);
 			if (ufs >= 0) {
 				authorized = ufs == 1;
@@ -76,5 +90,8 @@ native_verified_block_root_authorized(dev_t device)
 		}
 	}
 	iterator->release();
+	native_verified_block_root_media_matches = matches;
+	native_verified_block_root_provider_depth = depth;
+	native_verified_block_root_uuid_match = authorized;
 	return authorized;
 }
