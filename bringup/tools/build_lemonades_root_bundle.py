@@ -35,6 +35,22 @@ def emit_external(out):
 _verified_root_key:
 .incbin "{KEY}"
 .balign 8
+// Empty placeholders: the QEMU-only probe references the embedded-policy
+// symbols, but it runs only with the offline-owner-root-check boot arg,
+// which this profile never passes (the real envelopes come from disk).
+.globl _verified_root_manifest, _verified_root_manifest_bytes
+_verified_root_manifest:
+_verified_root_manifest_bytes:
+.quad 0
+.globl _verified_root_samples
+_verified_root_samples:
+.quad 0
+.globl _verified_root_sample_indices, _verified_root_sample_lengths
+_verified_root_sample_indices:
+.quad 0, 0, 0, 0
+_verified_root_sample_lengths:
+.quad 0, 0, 0, 0
+.balign 8
 .section __DATA,__data
 .balign 8
 .globl _verified_root_policy_count
