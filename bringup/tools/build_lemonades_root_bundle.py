@@ -22,7 +22,7 @@ import sys
 
 from build_lemonades_native_ufs import ROOT, TREE, UP, compile_from
 
-KEY = ROOT / "root-policy/trusted-key.bin"
+KEY = ROOT / "devices/lemonades/root-policy/trusted-key.bin"
 
 
 def emit_external(out):
