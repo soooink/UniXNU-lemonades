@@ -51,6 +51,9 @@ def main():
                         help="build the complete official sheng diagnostic with lemonades provider adaptation")
     parser.add_argument("--ufs-probe", action="store_true",
                         help="include gated lemonades UFS inspection and read-only storage bring-up")
+    parser.add_argument("--verified-root", action="store_true",
+                        help="link the VerifiedRoot provider with only the owner key in the kernel; "
+                             "the signed envelopes are read from the userdata image")
     parser.add_argument("--native-ufs", action="store_true",
                         help="include official NativeUfsBlock with lemonades transport and full signed policies")
     parser.add_argument("--owner-root", choices=("off", "audit", "trust"), default="off",
@@ -78,6 +81,8 @@ def main():
         parser.error("screen diagnostics require the qualified GIC observer")
     if args.ufs_probe and args.profile == "phone" and not args.early_trace:
         parser.error("phone UFS inspection requires --early-trace")
+    if args.verified_root and not args.native_ufs:
+        parser.error("--verified-root requires --native-ufs")
     if args.native_ufs and (args.ufs_probe or args.crypto_bootstrap != "prelinked"):
         parser.error("native UFS requires prelinked crypto and exclusive ownership of the transport")
     if args.owner_root != "off" and not args.native_ufs:
@@ -143,7 +148,7 @@ def main():
     settings["XNU_NATIVE_UFS"] = str(int(args.native_ufs))
     # The verified-root probe links the owner-root policy archive; without
     # the owner-root profile there is no policy archive to link.
-    settings["XNU_VERIFIED_ROOT_PROBE"] = str(int(args.native_ufs and args.owner_root != "off"))
+    settings["XNU_VERIFIED_ROOT_PROBE"] = str(int(args.native_ufs and (args.verified_root or args.owner_root != "off")))
     if args.native_ufs:
         settings["XNU_VERIFIED_ROOT_ARCHIVE"] = str(ctx.tree / "build/lemonades-root-policy/libVerifiedRootProbe.a")
     settings["XNU_OWNER_ROOT_AUDIT"] = str(int(args.owner_root != "off"))
@@ -187,6 +192,7 @@ def main():
               "pmgr": args.pmgr, "gic_diagnostics": args.gic_diagnostics,
               "screen_diagnostics": args.screen_diagnostics, "ufs_probe": args.ufs_probe}
     report["native_ufs"] = args.native_ufs
+    report["verified_root"] = args.verified_root
     report["owner_root"] = args.owner_root
     report["trust_cache_runtime"] = args.owner_root != "off"
     report["native_pan"] = settings.get("XNU_NATIVE_PAN") == "1"
@@ -307,7 +313,10 @@ def main():
         if args.native_ufs and not args.reuse_storage_from:
             run("native-ufs", [sys.executable, str(ROOT / "tools/build_lemonades_native_ufs.py"),
                               "--profile", args.profile])
-            if args.owner_root != "off":
+            if args.verified_root:
+                run("root-policy", [sys.executable, str(ROOT / "tools/build_lemonades_root_bundle.py"),
+                                    "--external"])
+            elif args.owner_root != "off":
                 run("root-policy", [sys.executable, str(ROOT / "tools/build_lemonades_root_bundle.py")])
         if args.owner_root != "off" and not args.reuse_storage_from:
             run("storage-providers", [sys.executable, str(ROOT / "tools/build_lemonades_storage_providers.py"),

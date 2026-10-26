@@ -1,0 +1,21 @@
+{
+  "mode": "external-manifests",
+  "trusted_key_sha256": "6e5370f24343e50ff268bace26d7f4821f4c7b0691e79fea554c8a3008c75ca2",
+  "trusted_key_bytes": 395,
+  "generation": 1,
+  "windows": [
+    {
+      "name": "OS",
+      "volume_uuid": "04769d26-2ca0-4825-b443-e2e5f88300f2",
+      "manifest_bytes": 47481664,
+      "manifest_sha256": "7ca891bee055c6cccb82c5a49c22707e77d454d6ff2051672bb366c22ddba049"
+    },
+    {
+      "name": "SystemOS",
+      "volume_uuid": "8846fe78-2910-4297-af97-d59bb6f8fc16",
+      "manifest_bytes": 25805344,
+      "manifest_sha256": "b623b598ad70498ce728100adc3d7c70287e4433776d0cdea13e6268547e230b"
+    }
+  ],
+  "note": "The signed envelopes live in the userdata image (VRPOLICY block at 0x1000); the kernel carries only the owner key."
+}

@@ -180,9 +180,13 @@ def decode_dmg(dmg, out):
     return total
 
 
-def build(image, windows, capacity):
-    """Write the SHNGROOT manifest and the windows into the image."""
-    layout, cursor = [], MIB
+def build(image, windows, capacity, start=MIB):
+    """Write the SHNGROOT manifest and the windows into the image.
+
+    `start` leaves room between the manifest block and the first window for the
+    signed verified-root policies (the driver reads them from disk, keeping the
+    kernel small enough for the 96 MiB boot partition)."""
+    layout, cursor = [], start
     for name, raw in windows:
         size = raw.stat().st_size
         layout.append((name, cursor, size, raw))
@@ -226,6 +230,8 @@ def main():
     parser.add_argument("--ipsw-dir", type=Path, required=True,
                         help="directory holding the extracted 044-*.dmg files")
     parser.add_argument("--out", type=Path, required=True, help="output userdata-root.img")
+    parser.add_argument("--policy-reserve", type=lambda v: int(v, 0), default=MIB,
+                        help="first window offset; leaves room for the signed root policies")
     args = parser.parse_args()
     import tomllib
     board = tomllib.loads(args.board.read_text())
@@ -246,13 +252,14 @@ def main():
             size = decode_dmg(dmg, raw)
             print(f"userdata: {window['name']} raw {size} bytes")
             raws.append((window["name"], raw))
-        total, entries, manifest = build(args.out, raws, capacity)
+        total, entries, manifest = build(args.out, raws, capacity, args.policy_reserve)
     report = {
         "image": str(args.out),
         "image_bytes": total,
         "image_sha256": hashlib.sha256(args.out.read_bytes()).hexdigest(),
         "manifest_sha256": manifest,
         "windows": [{"name": n, "offset": o, "size": s, "sha256": d.hex()} for n, o, s, d in entries],
+        "policy_reserve": args.policy_reserve,
         "userdata_bytes": capacity,
         "flash_command": f"fastboot flash userdata {args.out}",
         "source": "local (Linux DMG decoder)",

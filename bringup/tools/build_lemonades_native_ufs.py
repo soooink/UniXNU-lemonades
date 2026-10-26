@@ -129,6 +129,54 @@ bool NativeUfs::start(IOService *provider)
         assert store.count(declaration)==1
         store=store.replace(declaration,"")
     (OUT/"LemonadesUfsStore.inc").write_text(store)
+
+    # Verified-root policies are read from the userdata image (block 1 header,
+    # then each signed envelope). Only the owner public key is compiled in, so
+    # the envelope signature still anchors to the kernel.
+    policy_loader = '''
+// Read the signed verified-root envelopes from the userdata image.
+static bool loadRootPolicies (const RootLayout *layout)
+{
+  uint8_t header[4096];
+  if (hostRead4k (0, layout->userdataFirst + 1, 1, header) != kIOReturnSuccess) return false;
+  if (memcmp (header, "VRPOLICY", 8)) return false;
+  if (le32 (header + 8) != 1) return false;
+  uint32_t count = le32 (header + 12);
+  if (!count || count > 16) return false;
+  for (uint32_t index = 0; index < count; ++index) {
+    const uint8_t *entry = header + 48 + 96 * index;
+    uint64_t offset = le64 (entry + 32), size = le64 (entry + 40);
+    if ((offset & 4095) || !size || size > (1ULL << 31)) return false;
+    uint64_t bytes = (size + 4095) & ~4095ULL;
+    uint8_t *buffer = static_cast<uint8_t *> (IOMalloc (static_cast<vm_size_t> (bytes)));
+    if (!buffer) return false;
+    for (uint64_t done = 0; done < bytes; done += kDataMax) {
+      uint64_t left = bytes - done;
+      uint32_t blocks = static_cast<uint32_t> ((left < kDataMax ? left : kDataMax) / 4096);
+      if (hostRead4k (0, layout->userdataFirst + (offset + done) / 4096, blocks,
+                      buffer + done) != kIOReturnSuccess) {
+        IOFree (buffer, static_cast<vm_size_t> (bytes));
+        return false;
+      }
+    }
+    verified_root_policies[index].manifest = buffer;
+    verified_root_policies[index].manifestBytes = size;
+    verified_root_policy_count = index + 1;
+  }
+  return true;
+}
+
+'''
+    anchor = "bool NativeUfs::startRoot (IOService *provider)"
+    assert anchor in root, "startRoot anchor"
+    root = root.replace(anchor, policy_loader + anchor, 1)
+    geometry = "  gStoreGeometry = "
+    assert geometry in root, "gStoreGeometry anchor"
+    root = root.replace(geometry, "  if (!loadRootPolicies (layout)) {\n"
+                                  "    rootDiagnosticFailure (\"root policies\");\n"
+                                  "    IOFree (layout, sizeof (RootLayout));\n"
+                                  "    return false;\n"
+                                  "  }\n" + geometry, 1)
     generated.write_text(header+helpers+match+transport+layout+'#include "LemonadesUfsStore.inc"\n'+block+start+root)
     for p in (UP/"drivers/NativeUfs").glob("*.h"): shutil.copyfile(p,OUT/p.name)
     commands=(OUT/"RootCommands.h").read_text()
@@ -143,6 +191,19 @@ bool NativeUfs::start(IOService *provider)
         data=data.replace('#include "Umi','#include "Lemonades').replace('#include "UmiUfsRead.inc"','#include "LemonadesUfsRead.inc"')
         (OUT/name).write_text(data)
     shutil.copyfile(UP/"drivers/NativeVirtioBlock/VerifiedBlockPolicy.h",OUT/"VerifiedBlockPolicy.h")
+    # The verified-root policies are read from the userdata image at boot (the
+    # kernel cannot carry ~73 MiB of block hashes in the 96 MiB boot partition),
+    # so the table must be writable.
+    policy_header=OUT/"VerifiedBlockPolicy.h"
+    policy_text=policy_header.read_text()
+    assert "extern const NativeVerifiedBlockPolicy verified_root_policies[];" in policy_text
+    assert "extern const uint64_t verified_root_policy_count;" in policy_text
+    policy_text=(policy_text
+        .replace("extern const NativeVerifiedBlockPolicy verified_root_policies[];",
+                 "extern NativeVerifiedBlockPolicy verified_root_policies[];")
+        .replace("extern const uint64_t verified_root_policy_count;",
+                 "extern volatile uint64_t verified_root_policy_count;"))
+    policy_header.write_text(policy_text)
     shutil.copyfile(UP/"drivers/NativeUfs/LICENSE",OUT/"LICENSE")
     # Populate the storage ABI headers from the IOStorageFamily feed (the
     # umi flow prepared out/.../storage-abi by hand once).

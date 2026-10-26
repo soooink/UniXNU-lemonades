@@ -38,6 +38,10 @@ on:
         description: Native UFS bring-up (ufs driver probe; the QEMU-qualified owner-root binding stays a later stage)
         type: boolean
         default: false
+      verified_root:
+        description: Link the VerifiedRoot provider with only the owner key; signed envelopes come from the userdata image
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -94,6 +98,7 @@ jobs:
             --crypto-bootstrap "${{ inputs.crypto_bootstrap || 'prelinked' }}" \
             ${{ inputs.pmgr && '--pmgr' || '' }} \
             ${{ inputs.storage && '--native-ufs --early-trace' || '' }} \
+            ${{ inputs.verified_root && '--verified-root' || '' }} \
             -j 3
 
       - name: Collect artifacts
