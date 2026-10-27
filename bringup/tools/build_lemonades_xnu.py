@@ -356,17 +356,15 @@ def main():
                 # The SystemOS mount failed with EFTYPE (80) before any media
                 # diagnostics existed. Record the exact failing stage, the
                 # selected device path and the actual mount return status so
-                # the panic screen can attribute the failure precisely.
+                # the panic screen can attribute the failure precisely.  The
+                # replacement stays a single added line so the hunk counts in
+                # the pinned diff remain valid.
                 systemos = ctx.tree / "patches/xnu/offline-owner-systemos-mount.patch"
                 text = systemos.read_text()
                 panic_old = '+\tif (cache_error) panic("offline owner SystemOS mount failed: %d", cache_error);\n'
                 assert panic_old in text, "systemos panic line"
-                text = text.replace(panic_old, (
-                    '+\tif (cache_error) panic("offline owner SystemOS mount failed: %d"'
-                    ' " (stage=%d mount=%d dev=%s read=%d auth=%d)\\n",\n'
-                    '+\t    cache_error, native_owner_cache_stage, native_owner_cache_mount_status,\n'
-                    '+\t    native_owner_cache_device_path[0] ? native_owner_cache_device_path : "-",\n'
-                    '+\t    native_owner_cache_readonly, native_owner_cache_authorized);\n'))
+                text = text.replace(panic_old,
+                    '+\tif (cache_error) panic("offline owner SystemOS mount failed: %d stage=%d mount=%d dev=%s auth=%d", cache_error, native_owner_cache_stage, native_owner_cache_mount_status, native_owner_cache_device_path[0] ? native_owner_cache_device_path : "-", native_owner_cache_authorized);\n')
                 systemos.write_text(text)
                 run("root-policy", [sys.executable, str(ROOT / "tools/build_lemonades_root_bundle.py"),
                                     "--external"])
