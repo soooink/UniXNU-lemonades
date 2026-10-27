@@ -46,6 +46,10 @@ on:
         description: Draw the lemonades boot-progress stage page on the panel (last stage, procs, root state)
         type: boolean
         default: false
+      systemos:
+        description: Mount the signed SystemOS volume read-only as the union root (dyld shared cache)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -104,6 +108,7 @@ jobs:
             ${{ inputs.storage && '--native-ufs --early-trace' || '' }} \
             ${{ inputs.verified_root && '--verified-root' || '' }} \
             ${{ inputs.screen_diagnostics && '--screen-diagnostics --gic-diagnostics' || '' }} \
+            ${{ inputs.systemos && '--systemos' || '' }} \
             -j 3
 
       - name: Collect artifacts

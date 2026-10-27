@@ -87,7 +87,10 @@ def main():
         parser.error("native UFS requires prelinked crypto and exclusive ownership of the transport")
     if args.owner_root != "off" and not args.native_ufs:
         parser.error("owner root requires the complete verified storage configuration")
-    if args.systemos and args.owner_root != "trust":
+    # --verified-root also enforces owner root trust (XNU_OWNER_ROOT_TRUST=1),
+    # it just answers the mount binding through the native UFS window table
+    # instead of NativeVirtioBlock.
+    if args.systemos and args.owner_root != "trust" and not args.verified_root:
         parser.error("SystemOS requires the complete authenticated owner-root profile")
     if (args.data_ramdisk or args.legacy_display) and not args.systemos:
         parser.error("Data/display require the complete SystemOS profile")

@@ -38,12 +38,12 @@ if args.gic_diagnostics:
     patch = ROOT / "patches/lemonades-armcpu/gic-observer.patch"
     include = ROOT / "kits/lemonades/LemonadesArmCpuTrace.inc"
     subprocess.run(["patch", "--batch", "--fuzz=0", str(source), str(patch)], check=True)
-    # The pinned patch still names the umi overlay; this device ships the
-    # renamed observer.
+    # The pinned patches still name the umi overlay; this device ships the
+    # renamed observer (globals lemonades_armcpu_*, helpers lemonadesArmCpu*).
     text = source.read_text()
-    text = text.replace('#include "UmiArmCpuTrace.inc"',
-                        '#include "LemonadesArmCpuTrace.inc"')
-    text = text.replace("umiArmCpuObserve (", "lemonadesArmCpuObserve (")
+    text = text.replace("UmiArmCpuTrace.inc", "LemonadesArmCpuTrace.inc")
+    text = text.replace("umiArmCpu", "lemonadesArmCpu")
+    text = text.replace("umi_armcpu_", "lemonades_armcpu_")
     source.write_text(text)
     (out / include.name).write_bytes(include.read_bytes())
     inputs.update({p.name: {"path": str(p), "sha256": digest(p)} for p in (patch, include)})

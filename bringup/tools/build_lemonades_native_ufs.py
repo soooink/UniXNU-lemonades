@@ -56,10 +56,9 @@ def main():
     header=header.replace('#include "SmmuTakeover.h"','#include "LemonadesSmmuTakeover.h"')
     header+='extern "C" void umi_native_ufs_checkpoint(void);\n'
     header+='extern "C" unsigned long gPhysBase, gPhysSize;\n'
-    if args.systemos:
-        # Defined with the root publisher below; the media wait resolves the
-        # BSD device there so bsd_init's SystemOS mount can stay lock-free.
-        header+='static bool recordVolumeDevice (NativeUfsBlock *window, const char *uuid);\n'
+    # Defined with the root publisher below; the media wait resolves the BSD
+    # device there so bsd_init's SystemOS mount can stay lock-free.
+    header+='static bool recordVolumeDevice (NativeUfsBlock *window, const char *uuid);\n'
     probe=(ROOT/"devices/lemonades/package/LemonadesUfsProbe.cpp").read_text()
     helpers=probe[probe.index("static uint32_t umi_mmio_upper_seen;"):probe.index('#include "UmiUfsRead.inc"')]
     helpers=helpers.replace("static uintptr_t map(","static uintptr_t mapPhys(")
@@ -263,16 +262,15 @@ extern "C" int native_ufs_volume_manifest (const char *uuid, uint8_t digest[48])
 }
 
 '''
-    if args.systemos:
-        # Resolve the device as soon as the media exists, and again once every
-        # window is published (the BSD client can attach after IOMedia).
-        ready_line = "        ready = mediaWithUuidExists (uuid, device);\n"
-        assert block.count (ready_line) == 1, "publisher media wait"
-        block = block.replace (ready_line, ready_line +
-            "        if (ready) recordVolumeDevice (device, uuid);\n")
-        published_line = "  UfsRootPublicationResult result = ufsPublishRootWindows (operations, gPublicationPlan);\n"
-        assert block.count (published_line) == 1, "publisher completion"
-        block = block.replace (published_line, published_line + '''  if (result.phase == UfsRootPhase::Complete) {
+    # Resolve the device as soon as the media exists, and again once every
+    # window is published (the BSD client can attach after IOMedia).
+    ready_line = "        ready = mediaWithUuidExists (uuid, device);\n"
+    assert block.count (ready_line) == 1, "publisher media wait"
+    block = block.replace (ready_line, ready_line +
+        "        if (ready) recordVolumeDevice (device, uuid);\n")
+    published_line = "  UfsRootPublicationResult result = ufsPublishRootWindows (operations, gPublicationPlan);\n"
+    assert block.count (published_line) == 1, "publisher completion"
+    block = block.replace (published_line, published_line + '''  if (result.phase == UfsRootPhase::Complete) {
     for (unsigned index = 0; index < gPending; ++index) {
       for (unsigned tick = 0; tick < 300; ++tick) {
         if (recordVolumeDevice (gPendingDevice[index], gPendingUuid[index])) break;
@@ -283,7 +281,7 @@ extern "C" int native_ufs_volume_manifest (const char *uuid, uint8_t digest[48])
 ''')
     anchor = "bool NativeUfs::startRoot (IOService *provider)"
     assert anchor in root, "startRoot anchor"
-    injected = policy_loader + (volume_records if args.systemos else "")
+    injected = policy_loader + volume_records
     root = root.replace(anchor, injected + anchor, 1)
     geometry = "  gStoreGeometry = "
     assert geometry in root, "gStoreGeometry anchor"
