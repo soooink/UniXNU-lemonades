@@ -241,7 +241,12 @@ def panic_common_entry(workdir, code, load):
     if entry is None or main is None or not load <= entry <= load + len(code) - 8:
         raise SystemExit('Common panic renderer entry is missing or out of bounds')
     at = entry - load
-    if code[at:at + 8] != struct.pack('<II', 0xf9400021, branch(entry + 4, main)):
+    # The stub may capture x30 (the caller) before following the va_list
+    # pointer; accept both the plain and the caller-capturing form.
+    trace_form = struct.pack('<IIII', 0xaa1d03e3, 0xaa1e03e2, 0xf9400021, branch(entry + 12, main))
+    caller_form = struct.pack('<III', 0xaa1e03e2, 0xf9400021, branch(entry + 8, main))
+    plain_form = struct.pack('<II', 0xf9400021, branch(entry + 4, main))
+    if code[at:at + 16] != trace_form and code[at:at + 12] != caller_form and code[at:at + 8] != plain_form:
         raise SystemExit('Common panic entry does not dereference the Darwin va_list pointer and branch to the renderer')
     return entry
 

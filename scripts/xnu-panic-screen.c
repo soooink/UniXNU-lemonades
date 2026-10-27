@@ -214,8 +214,9 @@ static void hex (struct ctx *g, const char *label, u64 v)
   number (g, v, 16, 16, 1);
 }
 
-/* x0 = fmt as for panic(); x1 is set by the stub to the entry stack pointer. */
-__attribute__((noreturn, used, section(".text.b_main"))) void panic_screen_main (const char *fmt, const u64 *args)
+/* x0 = fmt as for panic(); x1 is set by the stub to the entry stack pointer;
+ * x2 is the panic caller's link register, drawn so the site can be symbolicated. */
+__attribute__((noreturn, used, section(".text.b_main"))) void panic_screen_main (const char *fmt, const u64 *args, u64 caller, u64 frame)
 {
   volatile struct vc_info *v = (volatile struct vc_info *)VINFO;
   struct ctx g;
@@ -254,17 +255,21 @@ __attribute__((noreturn, used, section(".text.b_main"))) void panic_screen_main 
   format (&g, fmt, args);
   g.log = 0;
   __asm__ volatile ("dsb sy");
-  /* Sample the active CPU translation regime, without changing it. This is
-   * panic-time evidence only; it does not establish early mappings or EL0 ABI. */
+  (void)caller;
+  /* Frame walk (cold panic blocks share the caller's chain): each frame keeps
+   * the previous fp and a return address, which names the lock caller. */
   {
-    u64 tcr, sctlr;
-    __asm__ volatile ("mrs %0, tcr_el1" : "=r" (tcr));
-    __asm__ volatile ("mrs %0, sctlr_el1" : "=r" (sctlr));
-    hex (&g, "\nTCR=", tcr);
-    hex (&g, "\nSCTLR=", sctlr);
+    u64 fp = frame;
+    for (unsigned depth = 0; depth < 3 && fp; ++depth) {
+      if ((fp & 7) || fp < 0xfffffff000000000ULL) break;
+      u64 prev = *(volatile u64 *)fp;
+      u64 pc = *(volatile u64 *)(fp + 8);
+      if ((pc & 3) || pc < 0xfffffff000000000ULL) break;
+      hex (&g, "\n", pc);
+      if (prev <= fp) break;
+      fp = prev;
+    }
   }
-  /* Resolved from this candidate's symbols by the patcher, never fixed addresses.
-   * Values are sampled at panic time and need not form an atomic VM snapshot. */
   (void)MAX_MEM;
   hex (&g, "\npages=", *(volatile const u32 *)PAGE_TOTAL);
   hex (&g, "\nfree=", *(volatile const u32 *)PAGE_FREE);
@@ -278,7 +283,7 @@ __attribute__((noreturn, used, section(".text.b_main"))) void panic_screen_main 
 /* Entry from panic(): keep the stack pointer, which addresses the variadic arguments. */
 __attribute__((naked, noreturn, section(".text.a_entry"))) void panic_screen (const char *fmt)
 {
-  __asm__ volatile ("mov x1, sp\n\tb panic_screen_main");
+  __asm__ volatile ("mov x3, x29\n\tmov x2, x30\n\tmov x1, sp\n\tb panic_screen_main");
 }
 
 /* The real panic_trap_to_debugger signature takes (fmt, va_list *, ...).
@@ -288,7 +293,7 @@ __attribute__((naked, noreturn, section(".text.a_entry"))) void panic_screen (co
  */
 __attribute__((naked, noreturn, section(".text.a_common"))) void panic_screen_common (void)
 {
-  __asm__ volatile ("ldr x1, [x1]\n\tb panic_screen_main");
+  __asm__ volatile ("mov x3, x29\n\tmov x2, x30\n\tldr x1, [x1]\n\tb panic_screen_main");
 }
 
 #include "Font.h"

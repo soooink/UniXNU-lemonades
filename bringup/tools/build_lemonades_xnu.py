@@ -157,7 +157,10 @@ def main():
     # query, so the NativeVirtioBlock dependency is not needed.
     settings["XNU_OWNER_ROOT_AUDIT"] = str(int(args.verified_root or args.owner_root != "off"))
     settings["XNU_OWNER_ROOT_TRUST"] = str(int(args.verified_root or args.owner_root == "trust"))
-    settings["XNU_TRUST_CACHE_RUNTIME"] = str(int(args.owner_root != "off"))
+    # bsd_init's launchd exec queries the runtime trust cache; on BCM2837
+    # trust_cache_init() is only compiled in with this flag, and without it
+    # trust_cache_rt_lock stays zeroed (non-sleepable) and panics on first use.
+    settings["XNU_TRUST_CACHE_RUNTIME"] = str(int(args.verified_root or args.owner_root != "off"))
     settings["XNU_NATIVE_AES"] = settings["XNU_NATIVE_VIRTIO_BLOCK"] = str(int(args.owner_root != "off"))
     for option in ("OWNER_CACHE_MOUNT", "OWNER_CACHE_STARTUP", "OWNER_BOOT_MANIFEST",
                    "OWNER_UNION_SYSTEMOS", "NATIVE_CS_HASH_CACHE"):
