@@ -68,7 +68,8 @@ build_payload() {
   for spec in "$@"; do extra="$extra '--kernel-arg','$spec',"; done
   PYTHONPATH="$U/scripts" python3 -c "
 import sys
-sys.argv=['unixnu','build','payload','--kernel','$OUT/kernel.macho','--unique-chip-id','0x9E3779B97F4A7C15',$extra]
+sys.argv=['unixnu','build','payload','--kernel','$OUT/kernel.macho','--unique-chip-id','0x9E3779B97F4A7C15',
+ '--trust-cache','out/ipsw/21H461/044-76040-038.dmg.trustcache',$extra]
 from unixnu.cli import main
 main()"
 }
