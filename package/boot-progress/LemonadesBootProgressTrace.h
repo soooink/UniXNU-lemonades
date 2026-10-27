@@ -14,8 +14,8 @@ __attribute__((noinline)) void lemonades_boot_progress_checkpoint_eight(void) {
   __asm__ volatile("" ::: "memory");
 }
 #if LEMONADES_BOOT_PROGRESS_PHONE
-extern void lemonades_early_trace(uint64_t, uint64_t, uint64_t);
-extern uint64_t lemonades_trace_console_address;
+extern void umi_early_trace(uint64_t, uint64_t, uint64_t);
+extern uint64_t umi_trace_console_address;
 #endif
 static void lemonades_boot_progress_record(unsigned phase) {
   uint64_t daif,counter;
@@ -34,8 +34,8 @@ static void lemonades_boot_progress_record(unsigned phase) {
     if(phase==5 || phase==6)
       lemonades_boot_progress_samples[phase-5][i]=record[i];
 #if LEMONADES_BOOT_PROGRESS_PHONE
-    if(lemonades_trace_console_address)
-      lemonades_early_trace(0xc0+i,record[i],lemonades_trace_console_address);
+    if(umi_trace_console_address)
+      umi_early_trace(0xc0+i,record[i],umi_trace_console_address);
 #endif
   }
   __asm__ volatile("msr daif,%0" :: "r"(daif) : "memory");

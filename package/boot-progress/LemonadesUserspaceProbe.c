@@ -15,7 +15,7 @@
 #include <sys/systm.h>
 #if LEMONADES_RUNTIME_TRACE
 #include "LemonadesUserWire.h"
-extern unsigned long lemonades_trace_console_address;
+extern unsigned long umi_trace_console_address;
 extern uint64_t boot_progress_epoch,boot_progress_frequency;
 extern volatile int native_owner_data_stage;
 extern volatile uint32_t native_data_persist_state,native_data_persist_header,native_data_persist_gpt,native_data_persist_gpt_after;
@@ -49,7 +49,7 @@ static void record(unsigned kind,int pid,const char *name,int error,uint64_t aux
   memcpy(v+8,name,strnlen(name,31));memcpy(v+12,text,strnlen(text,255));
   __atomic_store_n(&lock,0,__ATOMIC_RELEASE);
 }
-void lemonades_user_write_observe(int fd,uint64_t buffer,uint64_t bytes,int error) {
+void umi_user_write_observe(int fd,uint64_t buffer,uint64_t bytes,int error) {
   if(!enabled || (fd!=1 && fd!=2) || !bytes)return;
   char name[32]={0};proc_selfname(name,sizeof(name));if(selected(name)<0)return;
   char text[256]={0};size_t n=bytes<255?(size_t)bytes:255;int e=copyin((user_addr_t)buffer,text,n);
@@ -57,7 +57,7 @@ void lemonades_user_write_observe(int fd,uint64_t buffer,uint64_t bytes,int erro
   if(!contains(text,"error")&&!contains(text,"fail")&&!contains(text,"persona")&&!contains(text,"container")&&!contains(text,"keybag")&&!contains(text,"foreground")&&!contains(text,"default user")&&!contains(text,"fatal"))return;
   record(1,proc_selfpid(),name,error,bytes,text,0);
 }
-void lemonades_user_path_observe(unsigned operation,uint64_t path,int error,int fd) {
+void umi_user_path_observe(unsigned operation,uint64_t path,int error,int fd) {
   if(!enabled || error==EEXIST || (operation==2 && !error))return;
   char name[32]={0};proc_selfname(name,sizeof(name));if(selected(name)<0)return;
   char text[256]={0};size_t n=0;int e=copyinstr((user_addr_t)path,text,sizeof(text),&n);if(e)return;
@@ -78,7 +78,7 @@ static int emit(const char *tag,unsigned seq,const uint64_t *v,unsigned fields) 
   if(__atomic_exchange_n(&lemonades_console_lock,1,__ATOMIC_ACQUIRE))return 0;
   uint64_t daif;__asm__ volatile("mrs %0,daif\n\tmsr daifset,#3":"=r"(daif)::"memory");
   __asm__ volatile("dsb sy":::"memory");
-  int ok=(!memcmp(tag,"WAIT",4)||!memcmp(tag,"TOUC",4)||!memcmp(tag,"TCHX",4))?lemonades_user_wire_repeat((volatile uint32_t *)lemonades_trace_console_address,tag,seq,v,fields,3):lemonades_user_wire((volatile uint32_t *)lemonades_trace_console_address,tag,seq,v,fields);
+  int ok=(!memcmp(tag,"WAIT",4)||!memcmp(tag,"TOUC",4)||!memcmp(tag,"TCHX",4))?lemonades_user_wire_repeat((volatile uint32_t *)umi_trace_console_address,tag,seq,v,fields,3):lemonades_user_wire((volatile uint32_t *)umi_trace_console_address,tag,seq,v,fields);
   __asm__ volatile("dsb sy\n\tmsr daif,%0"::"r"(daif):"memory");__atomic_store_n(&lemonades_console_lock,0,__ATOMIC_RELEASE);return ok;
 }
 static void snapshot(unsigned seq) {
@@ -141,7 +141,7 @@ void lemonades_user_start(void) {
 #else
 unsigned lemonades_console_lock;
 void lemonades_user_start(void) {}
-void lemonades_user_write_observe(int fd,uint64_t buffer,uint64_t bytes,int error) {(void)fd;(void)buffer;(void)bytes;(void)error;}
-void lemonades_user_path_observe(unsigned operation,uint64_t path,int error,int fd) {(void)operation;(void)path;(void)error;(void)fd;}
+void umi_user_write_observe(int fd,uint64_t buffer,uint64_t bytes,int error) {(void)fd;(void)buffer;(void)bytes;(void)error;}
+void umi_user_path_observe(unsigned operation,uint64_t path,int error,int fd) {(void)operation;(void)path;(void)error;(void)fd;}
 void lemonades_user_exit_observe(int pid,const char *name,int status,unsigned ns,uint64_t code,const char *reason) {(void)pid;(void)name;(void)status;(void)ns;(void)code;(void)reason;}
 #endif

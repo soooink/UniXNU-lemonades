@@ -69,7 +69,7 @@ static void lemonades_runtime_trace_poll(unsigned now) {
   uint64_t daif;
   __asm__ volatile("mrs %0,daif\n\tmsr daifset,#3" : "=r"(daif) :: "memory");
   __asm__ volatile("dsb sy" ::: "memory");
-  int written=lemonades_runtime_write((volatile uint32_t *)lemonades_trace_console_address,sample+1,v);
+  int written=lemonades_runtime_write((volatile uint32_t *)umi_trace_console_address,sample+1,v);
   __asm__ volatile("dsb sy\n\tmsr daif,%0" :: "r"(daif) : "memory");
   __atomic_store_n(&lemonades_console_lock,0,__ATOMIC_RELEASE);
   if(written)++lemonades_runtime_trace_next;

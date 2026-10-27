@@ -10,8 +10,8 @@ volatile uint64_t lemonades_armcpu_timer_returned = 0;
 volatile uint64_t lemonades_armcpu_timer_first_counter = 0;
 volatile uint64_t lemonades_armcpu_timer_last_counter = 0;
 #if LEMONADES_ARMCPU_PHONE_TRACE
-void lemonades_early_trace(unsigned long, unsigned long, unsigned long);
-extern unsigned long lemonades_trace_console_address;
+void umi_early_trace(unsigned long, unsigned long, unsigned long);
+extern unsigned long umi_trace_console_address;
 #endif
 // Called only after the eighth real timer IRQ has returned from rtclock_intr
 // and executed ICC_EOIR1_EL1. The debugger observes; it never invokes this.
@@ -55,7 +55,7 @@ static void lemonadesArmCpuObserve(uint64_t phase, uint64_t detail)
   lemonades_armcpu_observation[29] = lemonades_armcpu_observation[29] | (1ULL << phase);
 #if LEMONADES_ARMCPU_PHONE_TRACE
   for (unsigned i = 0; i < 32; ++i) {
-    lemonades_early_trace(0x80 + i, lemonades_armcpu_observation[i], lemonades_trace_console_address);
+    umi_early_trace(0x80 + i, lemonades_armcpu_observation[i], umi_trace_console_address);
   }
 #endif
   __asm__ volatile ("msr daif, %0" :: "r"(daif) : "memory");
