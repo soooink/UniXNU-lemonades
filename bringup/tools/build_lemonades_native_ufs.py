@@ -56,6 +56,10 @@ def main():
     header=header.replace('#include "SmmuTakeover.h"','#include "LemonadesSmmuTakeover.h"')
     header+='extern "C" void umi_native_ufs_checkpoint(void);\n'
     header+='extern "C" unsigned long gPhysBase, gPhysSize;\n'
+    if args.systemos:
+        # Defined with the root publisher below; the media wait resolves the
+        # BSD device there so bsd_init's SystemOS mount can stay lock-free.
+        header+='static bool recordVolumeDevice (NativeUfsBlock *window, const char *uuid);\n'
     probe=(ROOT/"devices/lemonades/package/LemonadesUfsProbe.cpp").read_text()
     helpers=probe[probe.index("static uint32_t umi_mmio_upper_seen;"):probe.index('#include "UmiUfsRead.inc"')]
     helpers=helpers.replace("static uintptr_t map(","static uintptr_t mapPhys(")
@@ -171,9 +175,116 @@ static bool loadRootPolicies (const RootLayout *layout)
 }
 
 '''
+    # The owner SystemOS mount in bsd_init runs with preemption enabled, so the
+    # verified-block query cannot walk the IOKit registry there. The window
+    # publisher resolves each signed volume's BSD device once and leaves it in
+    # this table; the query only reads it.
+    volume_records = '''
+struct UfsVolumeRecord {
+  char uuid[37];
+  dev_t device;
+  char path[16];
+  uint8_t manifest[48];
+  bool authenticated;
+};
+static UfsVolumeRecord gVolumeRecords[4];
+static unsigned gVolumeRecordCount;
+
+static UfsVolumeRecord *findVolumeRecord (const char *uuid)
+{
+  for (unsigned index = 0; index < gVolumeRecordCount; ++index) {
+    if (!strcmp (gVolumeRecords[index].uuid, uuid)) return &gVolumeRecords[index];
+  }
+  return nullptr;
+}
+
+// Resolve `uuid` in the registry and remember both its BSD device and the
+// authenticated manifest digest. Window publisher thread only.
+static bool recordVolumeDevice (NativeUfsBlock *window, const char *uuid)
+{
+  if (!window || !uuid || strlen (uuid) != 36) return false;
+  if (UfsVolumeRecord *known = findVolumeRecord (uuid)) return known->device != NODEV;
+  if (gVolumeRecordCount >= 4) return false;
+  OSDictionary *matching = IOService::serviceMatching ("IOMedia");
+  OSDictionary *properties = OSDictionary::withCapacity (1);
+  OSString *wanted = OSString::withCString (uuid);
+  bool ready = matching && properties && wanted && properties->setObject ("UUID", wanted) &&
+               matching->setObject ("IOPropertyMatch", properties);
+  OSIterator *iterator = ready ? IOService::getMatchingServices (matching) : nullptr;
+  unsigned matches = 0;
+  dev_t device = NODEV;
+  char path[16] = { 0 };
+  if (iterator) {
+    while (IOService *media = OSDynamicCast (IOService, iterator->getNextObject ())) {
+      OSString *identity = OSDynamicCast (OSString, media->getProperty ("UUID"));
+      if (!identity || strcmp (identity->getCStringNoCopy (), uuid)) continue;
+      ++matches;
+      OSString *name = OSDynamicCast (OSString, media->getProperty (kIOBSDNameKey));
+      OSNumber *bsdMajor = OSDynamicCast (OSNumber, media->getProperty (kIOBSDMajorKey));
+      OSNumber *bsdMinor = OSDynamicCast (OSNumber, media->getProperty (kIOBSDMinorKey));
+      if (!name || !bsdMajor || !bsdMinor || !name->getLength () ||
+          name->getLength () >= sizeof (path) - 6) continue;
+      device = makedev (bsdMajor->unsigned32BitValue (), bsdMinor->unsigned32BitValue ());
+      snprintf (path, sizeof (path), "/dev/%s", name->getCStringNoCopy ());
+    }
+    iterator->release ();
+  }
+  OSSafeReleaseNULL (wanted);
+  OSSafeReleaseNULL (properties);
+  OSSafeReleaseNULL (matching);
+  if (matches != 1 || device == NODEV) return false;
+  UfsVolumeRecord *record = &gVolumeRecords[gVolumeRecordCount++];
+  memset (record, 0, sizeof (*record));
+  strlcpy (record->uuid, uuid, sizeof (record->uuid));
+  record->device = device;
+  strlcpy (record->path, path, sizeof (record->path));
+  record->authenticated = window->authenticatesVolume (uuid, record->manifest);
+  IOLog ("NativeUfs: volume %s %s dev=%u:%u authenticated=%d\\n", uuid, path,
+         major (device), minor (device), record->authenticated ? 1 : 0);
+  return true;
+}
+
+// Lock-free answers for the owner SystemOS mount and the boot manifest.
+extern "C" int native_ufs_volume_device (const char *uuid, dev_t *device, char *path, size_t size)
+{
+  UfsVolumeRecord *record = uuid ? findVolumeRecord (uuid) : nullptr;
+  if (!record || record->device == NODEV || !device || !path || size < 6) return 0;
+  *device = record->device;
+  strlcpy (path, record->path, size);
+  return 1;
+}
+
+extern "C" int native_ufs_volume_manifest (const char *uuid, uint8_t digest[48])
+{
+  UfsVolumeRecord *record = uuid ? findVolumeRecord (uuid) : nullptr;
+  if (!record || !record->authenticated || !digest) return 0;
+  memcpy (digest, record->manifest, 48);
+  return 1;
+}
+
+'''
+    if args.systemos:
+        # Resolve the device as soon as the media exists, and again once every
+        # window is published (the BSD client can attach after IOMedia).
+        ready_line = "        ready = mediaWithUuidExists (uuid, device);\n"
+        assert block.count (ready_line) == 1, "publisher media wait"
+        block = block.replace (ready_line, ready_line +
+            "        if (ready) recordVolumeDevice (device, uuid);\n")
+        published_line = "  UfsRootPublicationResult result = ufsPublishRootWindows (operations, gPublicationPlan);\n"
+        assert block.count (published_line) == 1, "publisher completion"
+        block = block.replace (published_line, published_line + '''  if (result.phase == UfsRootPhase::Complete) {
+    for (unsigned index = 0; index < gPending; ++index) {
+      for (unsigned tick = 0; tick < 300; ++tick) {
+        if (recordVolumeDevice (gPendingDevice[index], gPendingUuid[index])) break;
+        IOSleep (100);
+      }
+    }
+  }
+''')
     anchor = "bool NativeUfs::startRoot (IOService *provider)"
     assert anchor in root, "startRoot anchor"
-    root = root.replace(anchor, policy_loader + anchor, 1)
+    injected = policy_loader + (volume_records if args.systemos else "")
+    root = root.replace(anchor, injected + anchor, 1)
     geometry = "  gStoreGeometry = "
     assert geometry in root, "gStoreGeometry anchor"
     root = root.replace(geometry, "  if (!loadRootPolicies (layout)) {\n"
