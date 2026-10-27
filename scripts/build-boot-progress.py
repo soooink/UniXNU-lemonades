@@ -109,7 +109,10 @@ def main():
         symbols = subprocess.check_output(["xcrun", "nm", "-m", obj], text=True)
         weak.update(re.findall(r"\(undefined\) weak external (_\w+)", symbols))
     missing = sorted(weak-defined)
-    if any(not n.startswith("_native_") for n in missing):
+    # native_* telemetry plus the two kernel debug views that the prelinked
+    # image would have inventoried; both are optional here.
+    kernel_optional = {"_debug_buf_base", "_kernel_debugger_entry_count"}
+    if any(not n.startswith("_native_") and n not in kernel_optional for n in missing):
         raise SystemExit("Unexpected missing kernel observer import: " + str(missing))
     generated = {}
     for name in commands:
