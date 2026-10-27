@@ -58,6 +58,7 @@ def main():
     header+='extern "C" unsigned long gPhysBase, gPhysSize;\n'
     # Defined with the root publisher below; the media wait resolves the BSD
     # device there so bsd_init's SystemOS mount can stay lock-free.
+    header+='class NativeUfsBlock;\n'
     header+='static bool recordVolumeDevice (NativeUfsBlock *window, const char *uuid);\n'
     probe=(ROOT/"devices/lemonades/package/LemonadesUfsProbe.cpp").read_text()
     helpers=probe[probe.index("static uint32_t umi_mmio_upper_seen;"):probe.index('#include "UmiUfsRead.inc"')]
