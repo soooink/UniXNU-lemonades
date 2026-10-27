@@ -70,8 +70,13 @@ def main():
     # Only native_* telemetry may be absent; mandatory kernel imports still
     # go through the ordinary linker. Re-evaluate against real providers on
     # every build, so linking a provider restores its complete diagnostic view.
-    providers = [ROOT.parent / "kernel/kernel.macho",
-                 ROOT / "build/armcpu/libArmCpu.a", *objects]
+    # This device builds the diagnostic inside the source-kernel build, before
+    # the prelinked kernel image exists, so the kernel-side inventory is
+    # optional here (the observers' kernel imports resolve at link time).
+    kernel_image = ROOT.parent / "kernel/kernel.macho"
+    providers = [ROOT / "build/armcpu/libArmCpu.a", *objects]
+    if kernel_image.exists():
+        providers.insert(0, kernel_image)
     if os.environ.get("XNU_NATIVE_UFS") == "1":
         providers.append(ROOT / "build/native-ufs/libNativeUfs.a")
     if os.environ.get("XNU_NATIVE_AES") == "1":
