@@ -320,7 +320,8 @@ def main():
         if args.native_ufs and not args.reuse_storage_from:
             run("native-ufs", [sys.executable, str(ROOT / "tools/build_lemonades_native_ufs.py"),
                               "--profile", args.profile]
-                + (["--verified-root"] if args.verified_root else []))
+                + (["--verified-root"] if args.verified_root else [])
+                + (["--boot-progress"] if args.screen_diagnostics else []))
             if args.verified_root:
                 # The pinned recipe requires the virtio provider for owner-root
                 # trust; this profile substitutes the native UFS query.

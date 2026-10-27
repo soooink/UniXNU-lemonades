@@ -40,6 +40,8 @@ def main():
     parser.add_argument("--profile",choices=("qemu","phone"),required=True)
     parser.add_argument("--verified-root", action="store_true",
                         help="the VerifiedRoot bundle provides vr_*/policy symbols; skip the empty stub")
+    parser.add_argument("--boot-progress", action="store_true",
+                        help="libBootProgress.a (force-loaded) owns boot_progress_poll; do not define it here")
     args=parser.parse_args()
     OUT.mkdir(parents=True,exist_ok=True)
     source=(UP/"drivers/NativeUfs/NativeUfs.cpp").read_text()
@@ -368,8 +370,9 @@ static bool loadRootPolicies (const RootLayout *layout)
           '#include <stddef.h>\n'
           '#include <stdint.h>\n'
           + stub_body +
-          '// weak-declared in NativeUfs.cpp; Apple ld wants a definition in the final image\n'
-          'extern "C" void boot_progress_poll(void) {}\n')
+          '// weak-declared in NativeUfs.cpp; Apple ld wants a definition in the final image.\n'
+          '// With the diagnostic profile the force-loaded libBootProgress.a provides the real one.\n'
+          + ('' if args.boot_progress else 'extern "C" void boot_progress_poll(void) {}\n'))
         sdk=subprocess.check_output(["xcrun","--sdk","iphoneos","--show-sdk-path"],text=True).strip()
         result=subprocess.run(["xcrun","clang","-x","c++","-target","arm64-apple-ios17.0","-isysroot",sdk,
                         "-I",str(abi),"-I",str(UP/"kits/VerifiedRoot/include"),"-I",str(OUT),
