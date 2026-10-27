@@ -87,7 +87,7 @@ main()"
 }
 build_payload
 bootimg_for boot-storage.img
-build_payload native-ufs-root=1 native-ufs-diagnostics=1 boot-progress=1 lemonades-build-tag=tc1
+build_payload native-ufs-root=1 native-ufs-diagnostics=1 boot-progress=1 lemonades-build-tag=tc2
 bootimg_for boot-storage-ufs-diag.img
 
 echo "FLASH control  : fastboot flash boot_b $U/out/lemonades/boot/boot-storage.img"
