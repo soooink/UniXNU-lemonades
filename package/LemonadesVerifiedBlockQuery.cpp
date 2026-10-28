@@ -23,6 +23,7 @@
 #include <sys/vnode.h>
 #include <sys/vfs_context.h>
 #include <libkern/libkern.h>
+#include <libkern/copyio.h>
 
 // The query module compiles against the plain bsd_init record (no IOKit
 // linkage), so the sleep below is the osfmk delay(), not IOSleep.
@@ -111,7 +112,6 @@ native_verified_block_manifest_sha384(dev_t device, const char *uuid, uint8_t di
 extern "C" user_addr_t
 native_owner_cache_envp(user_addr_t scratch)
 {
-	extern int copyout(const void *, user_addr_t, size_t);
 	static const char *const dirs[] = {
 		"/System/Library/Caches/com.apple.dyld",
 		"/System/Cryptexes/OS/System/Library/Caches/com.apple.dyld",
