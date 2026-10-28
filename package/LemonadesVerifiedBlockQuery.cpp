@@ -49,6 +49,10 @@ volatile uint32_t native_verified_block_wrong_uuid_refused = 0;
 volatile uint32_t native_verified_block_volume_queries = 0;
 volatile uint32_t native_verified_block_volume_hits = 0;
 volatile uint32_t native_verified_block_manifest_queries = 0;
+// Result of the dyld-cache path probes run before launchd exec (0 = present,
+// otherwise the positive errno). Shown on the boot-progress page.
+volatile uint32_t native_owner_cache_probe[8] = {0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+                                                 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff};
 }
 
 extern "C" int
@@ -112,11 +116,46 @@ native_verified_block_manifest_sha384(dev_t device, const char *uuid, uint8_t di
 extern "C" user_addr_t
 native_owner_cache_envp(user_addr_t scratch)
 {
+	extern void boot_progress_stage(const char *) __attribute__((weak));
 	static const char *const dirs[] = {
 		"/System/Library/Caches/com.apple.dyld",
 		"/System/Cryptexes/OS/System/Library/Caches/com.apple.dyld",
 		"/private/preboot/Cryptexes/OS/System/Library/Caches/com.apple.dyld",
 	};
+	// Probe the exact paths dyld consults, so a photograph of the boot page
+	// reports what the union exposes before launchd execs.
+	static const char *const probes[] = {
+		"/System/Library/Caches/com.apple.dyld",
+		"/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64",
+		"/System/Cryptexes/OS",
+		"/System/Cryptexes/OS/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64",
+		"/System/Library/dyld/dyld_shared_cache_arm64",
+		"/usr/lib/libSystem.B.dylib",
+	};
+	char summary[160];
+	int used = 0;
+	for (size_t index = 0; index < sizeof(probes) / sizeof(probes[0]); ++index) {
+		vnode_t found = NULLVP;
+		int status = vnode_lookup(probes[index], 0, &found, vfs_context_kernel());
+		if (found) {
+			vnode_put(found);
+		}
+		if (status != 0) {
+			status = -status;
+		}
+		native_owner_cache_probe[index] = (uint32_t)status;
+		int written = snprintf(summary + used, sizeof(summary) - (size_t)used,
+		    "%s%d", index ? "," : "", status);
+		if (written <= 0) {
+			break;
+		}
+		used += written;
+	}
+	if (boot_progress_stage) {
+		char line[176];
+		snprintf(line, sizeof(line), "cacheprobe %s", summary);
+		boot_progress_stage(line);
+	}
 	const char *chosen = dirs[0];
 	char path[192];
 	for (size_t index = 0; index < sizeof(dirs) / sizeof(dirs[0]); ++index) {
