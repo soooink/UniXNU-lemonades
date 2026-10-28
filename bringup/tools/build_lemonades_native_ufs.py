@@ -203,7 +203,14 @@ static UfsVolumeRecord *findVolumeRecord (const char *uuid)
 static bool recordVolumeDevice (NativeUfsBlock *window, const char *uuid)
 {
   if (!window || !uuid || strlen (uuid) != 36) return false;
-  if (UfsVolumeRecord *known = findVolumeRecord (uuid)) return known->device != NODEV;
+  if (UfsVolumeRecord *known = findVolumeRecord (uuid)) {
+    // The first attempt can race the window start (online/verified storage
+    // not ready yet); refresh the digest whenever it is still unauthenticated.
+    if (!known->authenticated) {
+      known->authenticated = window->authenticatesVolume (uuid, known->manifest);
+    }
+    return known->device != NODEV;
+  }
   if (gVolumeRecordCount >= 4) return false;
   OSDictionary *matching = IOService::serviceMatching ("IOMedia");
   OSDictionary *properties = OSDictionary::withCapacity (1);

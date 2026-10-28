@@ -77,5 +77,18 @@ native_verified_block_manifest_sha384(dev_t device, const char *uuid, uint8_t di
 	if (!native_ufs_blocks_published || !native_verified_block_root_authorized(device)) {
 		return 0;
 	}
-	return native_ufs_volume_manifest(uuid, digest);
+	// The boot manifest runs immediately after the union mount; the window
+	// publisher's record may still be filling the digest/authentication for
+	// this volume. Retry briefly rather than refusing the owner identity.
+	uint8_t scratch[48];
+	for (unsigned attempt = 0; attempt < 4; ++attempt) {
+		if (native_ufs_volume_manifest(uuid, scratch)) {
+			if (digest) {
+				memcpy(digest, scratch, 48);
+			}
+			return 1;
+		}
+		IOSleep(10);  // the publisher retries its lookup on this cadence
+	}
+	return 0;
 }
