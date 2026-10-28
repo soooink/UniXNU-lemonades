@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import struct
 import subprocess
@@ -379,9 +380,11 @@ def main():
                 assert extern_old in text, "extern anchor"
                 text = text.replace(extern_old,
                     extern_old + '+extern user_addr_t native_owner_cache_envp(user_addr_t);\n')
-                hunk_old = '@@ -7013,8 +7013,256 @@'
-                assert hunk_old in text, "big hunk header"
-                text = text.replace(hunk_old, '@@ -7013,8 +7013,257 @@')
+                hunk_match = re.search(r'@@ -7013,8 \+7013,(\d+) @@', text)
+                assert hunk_match, "big hunk header"
+                text = (text[:hunk_match.start()] +
+                        f'@@ -7013,8 +7013,{int(hunk_match.group(1)) + 1} @@' +
+                        text[hunk_match.end():])
                 systemos.write_text(text)
                 # zzz-boot-progress.patch carries the old line as hunk context;
                 # the assembled tree applies that patch after this one.
