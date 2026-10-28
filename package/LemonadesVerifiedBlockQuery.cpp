@@ -18,6 +18,10 @@
 // The diagnostics the audit records are filled from the same state.
 #include <sys/param.h>
 #include <sys/types.h>
+#include <kern/clock.h>
+
+// The query module compiles against the plain bsd_init record (no IOKit
+// linkage), so the sleep below is the osfmk delay(), not IOSleep.
 
 extern "C" {
 extern volatile uint32_t native_ufs_blocks_published;
@@ -88,7 +92,7 @@ native_verified_block_manifest_sha384(dev_t device, const char *uuid, uint8_t di
 			}
 			return 1;
 		}
-		IOSleep(10);  // the publisher retries its lookup on this cadence
+		delay(10000);  // 10 ms; the publisher retries its lookup on this cadence
 	}
 	return 0;
 }
