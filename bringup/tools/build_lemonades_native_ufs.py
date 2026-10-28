@@ -274,12 +274,27 @@ extern "C" int native_ufs_volume_device (const char *uuid, dev_t *device, char *
   return 1;
 }
 
+
 extern "C" int native_ufs_volume_manifest (const char *uuid, uint8_t digest[48])
 {
   UfsVolumeRecord *record = uuid ? findVolumeRecord (uuid) : nullptr;
-  if (!record || !record->authenticated || !digest) return 0;
-  memcpy (digest, record->manifest, 48);
-  return 1;
+  if (record && record->authenticated && digest) {
+    memcpy (digest, record->manifest, 48);
+    return 1;
+  }
+  // The record table can lag the mounted root: the union boot manifest runs
+  // immediately after mountroot, and the OS/root record may not exist yet.
+  // Fall back to the published windows. verifiedStorage is immutable after
+  // configureVerification() and the window list is stable once publication
+  // completed, so this is safe without a lock (bsd_init is preemptible but
+  // the windows are never freed on the success path).
+  for (unsigned index = 0; index < gPending; ++index) {
+    NativeUfsBlock *block = gPendingDevice[index];
+    char wanted[37];
+    if (!block || !block->signedVolumeUuid (wanted) || strcmp (wanted, uuid)) continue;
+    return block->authenticatesVolume (uuid, digest) ? 1 : 0;
+  }
+  return 0;
 }
 
 '''
