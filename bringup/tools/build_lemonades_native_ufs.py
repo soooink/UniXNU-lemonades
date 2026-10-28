@@ -189,6 +189,10 @@ struct UfsVolumeRecord {
 };
 static UfsVolumeRecord gVolumeRecords[4];
 static unsigned gVolumeRecordCount;
+// Diagnostic view for the boot-progress page: how many signed volumes were
+// resolved and which of them carry an authenticated manifest digest.
+extern "C" volatile uint32_t native_ufs_volume_records = 0;
+extern "C" volatile uint32_t native_ufs_volume_authenticated_mask = 0;
 
 static UfsVolumeRecord *findVolumeRecord (const char *uuid)
 {
