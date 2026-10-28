@@ -366,6 +366,15 @@ def main():
                 text = text.replace(panic_old,
                     '+\tif (cache_error) panic("offline owner SystemOS mount failed: %d stage=%d mount=%d dev=%s auth=%d", cache_error, native_owner_cache_stage, native_owner_cache_mount_status, native_owner_cache_device_path[0] ? native_owner_cache_device_path : "-", native_owner_cache_authorized);\n')
                 systemos.write_text(text)
+                # zzz-boot-progress.patch carries the old line as hunk context;
+                # the assembled tree applies that patch after this one.
+                bootsys = ctx.tree / "patches/xnu/zzz-boot-progress.patch"
+                text = bootsys.read_text()
+                ctx_old = ' \tif (cache_error) panic("offline owner SystemOS mount failed: %d", cache_error);\n'
+                assert ctx_old in text, "boot-progress systemos context"
+                text = text.replace(ctx_old,
+                    ' \tif (cache_error) panic("offline owner SystemOS mount failed: %d stage=%d mount=%d dev=%s auth=%d", cache_error, native_owner_cache_stage, native_owner_cache_mount_status, native_owner_cache_device_path[0] ? native_owner_cache_device_path : "-", native_owner_cache_authorized);\n')
+                bootsys.write_text(text)
                 run("root-policy", [sys.executable, str(ROOT / "tools/build_lemonades_root_bundle.py"),
                                     "--external"])
             elif args.owner_root != "off":
