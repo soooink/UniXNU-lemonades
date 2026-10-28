@@ -208,6 +208,10 @@ static bool recordVolumeDevice (NativeUfsBlock *window, const char *uuid)
     // not ready yet); refresh the digest whenever it is still unauthenticated.
     if (!known->authenticated) {
       known->authenticated = window->authenticatesVolume (uuid, known->manifest);
+      if (known->authenticated) {
+        __atomic_fetch_or (&native_ufs_volume_authenticated_mask,
+                           1U << (known - gVolumeRecords), __ATOMIC_RELAXED);
+      }
     }
     return known->device != NODEV;
   }
@@ -246,6 +250,11 @@ static bool recordVolumeDevice (NativeUfsBlock *window, const char *uuid)
   record->device = device;
   strlcpy (record->path, path, sizeof (record->path));
   record->authenticated = window->authenticatesVolume (uuid, record->manifest);
+  __atomic_store_n (&native_ufs_volume_records, gVolumeRecordCount, __ATOMIC_RELAXED);
+  if (record->authenticated) {
+    __atomic_fetch_or (&native_ufs_volume_authenticated_mask,
+                       1U << (gVolumeRecordCount - 1), __ATOMIC_RELAXED);
+  }
   IOLog ("NativeUfs: volume %s %s dev=%u:%u authenticated=%d\\n", uuid, path,
          major (device), minor (device), record->authenticated ? 1 : 0);
   return true;

@@ -68,6 +68,7 @@ extern volatile uint64_t native_ufs_block_reads __attribute__((weak_import)), na
 extern volatile uint64_t native_ufs_verify_ticks __attribute__((weak_import)), native_ufs_read_ticks __attribute__((weak_import));
 extern volatile uint64_t native_ufs_block_failures __attribute__((weak_import));
 extern volatile uint32_t native_ufs_integrity_failures __attribute__((weak_import)), native_ufs_blocks_published __attribute__((weak_import));
+extern volatile uint32_t native_ufs_volume_records __attribute__((weak_import)), native_ufs_volume_authenticated_mask __attribute__((weak_import));
 extern volatile uint32_t native_ufs_probe_calls __attribute__((weak_import)), native_ufs_matched __attribute__((weak_import));
 extern volatile uint32_t native_ufs_root_step __attribute__((weak_import));
 extern const char *volatile native_ufs_root_failure __attribute__((weak_import));
@@ -208,9 +209,10 @@ static void draw(unsigned now) {
   snprintf(b,sizeof(b),"time=%us idle=%us IRQ=%llu monitor=%llu lost=%u root=%d procs=%d free=%u",
     now, now-visible->activity_at, irq_count, thread_count, visible->dropped,
     &native_owner_root_accepted ? native_owner_root_accepted : -1, nprocs, vm_page_free_count); line(1,b,0xffffffff);
-  snprintf(b,sizeof(b),"%s requests=%llu verified4K=%llu failures=%llu integrity=%u published=%u",
+  snprintf(b,sizeof(b),"%s requests=%llu verified4K=%llu failures=%llu integrity=%u published=%u vols=%u auth=0x%x",
     BP_OPTIONAL(native_virtio_ready) && !BP_OPTIONAL(native_ufs_blocks_published) ? "OFFLINE VIRTIO" : "UFS",
-    visible->reads,visible->verified,visible->failures,BP_OPTIONAL(native_ufs_integrity_failures),BP_OPTIONAL(native_ufs_blocks_published));
+    visible->reads,visible->verified,visible->failures,BP_OPTIONAL(native_ufs_integrity_failures),BP_OPTIONAL(native_ufs_blocks_published),
+    BP_OPTIONAL(native_ufs_volume_records),BP_OPTIONAL(native_ufs_volume_authenticated_mask));
   if(!&native_ufs_block_reads && !&native_virtio_ready)
     snprintf(b,sizeof(b),"STORAGE: not connected; no root device mounted (root=-1: provider absent)");
   if(&native_ufs_root_step && !BP_OPTIONAL(native_ufs_blocks_published)) {
