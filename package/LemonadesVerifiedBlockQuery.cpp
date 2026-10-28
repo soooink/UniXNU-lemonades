@@ -19,6 +19,10 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <kern/clock.h>
+#include <sys/namei.h>
+#include <sys/vnode.h>
+#include <sys/vfs_context.h>
+#include <libkern/libkern.h>
 
 // The query module compiles against the plain bsd_init record (no IOKit
 // linkage), so the sleep below is the osfmk delay(), not IOSleep.
@@ -95,4 +99,46 @@ native_verified_block_manifest_sha384(dev_t device, const char *uuid, uint8_t di
 		delay(10000);  // 10 ms; the publisher retries its lookup on this cadence
 	}
 	return 0;
+}
+
+// load_init_program (union SystemOS mode) sets envp to USER_ADDR_NULL, so
+// dyld falls back to its default cache search paths, which assume the
+// cryptex is mounted at /System/Cryptexes/OS.  This device unions the
+// cryptex over "/", so the cache lives at /System/Library/Caches/... .
+// Supply DYLD_SHARED_CACHE_DIR pointing at the first candidate directory
+// that actually contains the shared cache (probed with vnode_lookup, safe
+// in the bsd_init thread like the mount code).
+extern "C" user_addr_t
+native_owner_cache_envp(user_addr_t scratch)
+{
+	extern int copyout(const void *, user_addr_t, size_t);
+	static const char *const dirs[] = {
+		"/System/Library/Caches/com.apple.dyld",
+		"/System/Cryptexes/OS/System/Library/Caches/com.apple.dyld",
+		"/private/preboot/Cryptexes/OS/System/Library/Caches/com.apple.dyld",
+	};
+	const char *chosen = dirs[0];
+	char path[192];
+	for (size_t index = 0; index < sizeof(dirs) / sizeof(dirs[0]); ++index) {
+		snprintf(path, sizeof(path), "%s/dyld_shared_cache_arm64", dirs[index]);
+		vnode_t probe = NULLVP;
+		if (vnode_lookup(path, 0, &probe, vfs_context_kernel()) == 0 && probe) {
+			vnode_put(probe);
+			chosen = dirs[index];
+			break;
+		}
+	}
+	char variable[224];
+	snprintf(variable, sizeof(variable), "DYLD_SHARED_CACHE_DIR=%s", chosen);
+	user64_addr_t vector[2];
+	user_addr_t placement = scratch + 0x400;
+	if (copyout(variable, placement, strlen(variable) + 1) != 0) {
+		return USER_ADDR_NULL;
+	}
+	vector[0] = scratch + 0x400;
+	vector[1] = 0;
+	if (copyout(vector, scratch + 0x500, sizeof(vector)) != 0) {
+		return USER_ADDR_NULL;
+	}
+	return scratch + 0x500;
 }

@@ -365,6 +365,23 @@ def main():
                 assert panic_old in text, "systemos panic line"
                 text = text.replace(panic_old,
                     '+\tif (cache_error) panic("offline owner SystemOS mount failed: %d stage=%d mount=%d dev=%s auth=%d rc=%d", cache_error, native_owner_cache_stage, native_owner_cache_mount_status, native_owner_cache_device_path[0] ? native_owner_cache_device_path : "-", native_owner_cache_authorized, native_owner_cache_root_recheck);\n')
+                # Union mode leaves envp NULL, so dyld searches the default
+                # cryptex paths (/System/Cryptexes/OS/...) and finds no shared
+                # cache. Point DYLD_SHARED_CACHE_DIR at the real cache dir via
+                # the query-module helper (probed with vnode_lookup).
+                envp_old = '+\t*envp = USER_ADDR_NULL;\n'
+                assert envp_old in text, "systemos envp line"
+                text = text.replace(envp_old,
+                    '+\t*envp = native_owner_cache_envp(scratch);\n')
+                # The helper's extern needs one more added line in the big
+                # prepare-function hunk.
+                extern_old = '+extern int native_verified_block_volume_device(const char *, dev_t *, char *, size_t);\n'
+                assert extern_old in text, "extern anchor"
+                text = text.replace(extern_old,
+                    extern_old + '+extern user_addr_t native_owner_cache_envp(user_addr_t);\n')
+                hunk_old = '@@ -7013,8 +7013,256 @@'
+                assert hunk_old in text, "big hunk header"
+                text = text.replace(hunk_old, '@@ -7013,8 +7013,257 @@')
                 systemos.write_text(text)
                 # zzz-boot-progress.patch carries the old line as hunk context;
                 # the assembled tree applies that patch after this one.
