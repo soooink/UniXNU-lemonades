@@ -60,12 +60,39 @@ def validate_bundle(data):
     return True
 
 
+def merge_extra(payload, extra):
+    """Add cdhashes to the version-2 module, keeping strict ascending order."""
+    if struct.unpack_from("<I", payload, 0)[0] != 2:
+        raise SystemExit("module is not a version-2 trust cache")
+    entries = struct.unpack_from("<I", payload, 20)[0]
+    if 24 + entries * 24 > len(payload):
+        raise SystemExit("module entry count exceeds the payload")
+    items = [payload[24 + i * 24:24 + (i + 1) * 24] for i in range(entries)]
+    known = {item[:20] for item in items}
+    added = 0
+    for at in range(0, len(extra) - 19, 20):
+        digest = extra[at:at + 20]
+        if digest in known:
+            continue
+        items.append(digest + bytes((2, 0, 0, 0)))
+        known.add(digest)
+        added += 1
+    items.sort(key=lambda item: item[:20])
+    print(f"trust cache: +{added} shared-cache cdhashes ({len(items)} entries)")
+    return payload[:20] + struct.pack("<I", len(items)) + b"".join(items)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path, help="the IPSW *.dmg.trustcache (IM4P)")
     parser.add_argument("output", type=Path, help="bundle file for --trust-cache")
+    parser.add_argument("--extra", type=Path,
+                        help="concatenated 20-byte cdhashes to add (e.g. the dyld shared "
+                             "cache files the owner-root kernel must validate)")
     args = parser.parse_args()
     payload = extract(args.input.read_bytes())
+    if args.extra:
+        payload = merge_extra(payload, args.extra.read_bytes())
     bundle = struct.pack("<II", 1, 8) + payload
     if not validate_bundle(bundle):
         raise SystemExit("extracted trust cache does not satisfy the bundle rules")

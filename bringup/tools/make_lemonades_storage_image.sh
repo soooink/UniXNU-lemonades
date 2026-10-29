@@ -67,7 +67,8 @@ DTC="$HOME/ROm/uefi-lemonades/Resources/DTBs/lemonades-full.dtb"
 # DarwinBoot validates the XNU trust cache bundle; the IPSW ships an IM4P.
 python3 "$DEV/bringup/tools/make_lemonades_trustcache.py" \
   out/ipsw/21H461/044-76040-038.dmg.trustcache \
-  out/lemonades/trustcache/lemonades-static.trustcache
+  out/lemonades/trustcache/lemonades-static.trustcache \
+  --extra "$DEV/bringup/lemonades-dyld-cache-cdhashes.bin"
 build_payload() {
   local extra=""
   for spec in "$@"; do extra="$extra '--kernel-arg','$spec',"; done
@@ -87,7 +88,7 @@ main()"
 }
 build_payload
 bootimg_for boot-storage.img
-build_payload native-ufs-root=1 native-ufs-diagnostics=1 boot-progress=1 lemonades-build-tag=tc7
+build_payload native-ufs-root=1 native-ufs-diagnostics=1 boot-progress=1 lemonades-build-tag=tc8
 bootimg_for boot-storage-ufs-diag.img
 
 echo "FLASH control  : fastboot flash boot_b $U/out/lemonades/boot/boot-storage.img"
